@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+
+# virtual environment
+venv/
+rl_env/
+
+# Mac
+.DS_Store
+
+# model files
+*.zip

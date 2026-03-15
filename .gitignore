@@ -11,3 +11,6 @@ rl_env/
 
 # model files
 *.zip
+
+.vscode/
+.DS_Store

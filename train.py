@@ -15,17 +15,22 @@ def main():
     model = PPO(
         "MlpPolicy",
         env,
-        verbose=1
+        verbose=1,
+        n_steps=2048,
+        batch_size=64,
+        n_epochs=10,
+        learning_rate=3e-4,
+        gamma=0.99,
     )
-
+ 
     # train model
-    model.learn(total_timesteps=20000)
-
+    model.learn(total_timesteps=500000)
+ 
     # save model
     model.save("flu_rl_model")
-
+ 
     print("Training complete. Model saved.")
-
-
+ 
+ 
 if __name__ == "__main__":
     main()

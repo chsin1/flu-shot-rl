@@ -13,4 +13,6 @@ rl_env/
 *.zip
 
 .vscode/
-.DS_Store
+.DS_Store*.npy
+*.pkl
+*.zip

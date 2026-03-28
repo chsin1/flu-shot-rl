@@ -48,7 +48,11 @@ class FluVaccineEnv(gym.Env):
  
         # vaccines expire after this many weeks
         self.expiry_window = 4
- 
+
+        # rare catastrophic local outbreak: one region's demand doubles
+        self.catastrophic_spike_prob = 0.05
+        self.catastrophic_spike_multiplier = 2.0
+
         # state: inventory(3) + expiring_soon(3) + storage_capacity(3) + demand_level(3) + week(1) = 13
         self.observation_space = spaces.Box(
             low=0,
@@ -61,6 +65,8 @@ class FluVaccineEnv(gym.Env):
         self.expiry_tracker = None  # shape (expiry_window, num_regions)
         self.demand_level = np.zeros(self.num_regions)
         self.week = 0
+        self.last_spike_region = -1
+        self.last_spike_multiplier = 1.0
  
     def _seasonal_demand(self):
         """
@@ -73,8 +79,21 @@ class FluVaccineEnv(gym.Env):
         """
         multiplier = SEASONAL_CURVE[self.week]
         base = REGION_BASE_DEMAND * multiplier
-        noise = np.random.normal(loc=0.0, scale=20.0, size=self.num_regions)
+        noise = self.np_random.normal(loc=0.0, scale=20.0, size=self.num_regions)
         demand = np.clip(base + noise, 10, 600).astype(np.float32)
+
+        self.last_spike_region = -1
+        self.last_spike_multiplier = 1.0
+        if self.np_random.random() < self.catastrophic_spike_prob:
+            spike_region = int(self.np_random.integers(self.num_regions))
+            demand[spike_region] = np.clip(
+                demand[spike_region] * self.catastrophic_spike_multiplier,
+                10,
+                600,
+            )
+            self.last_spike_region = spike_region
+            self.last_spike_multiplier = self.catastrophic_spike_multiplier
+
         return demand
  
     def reset(self, seed=None, options=None):
@@ -82,6 +101,8 @@ class FluVaccineEnv(gym.Env):
  
         self.inventory = np.array([300.0, 300.0, 300.0])
         self.week = 0
+        self.last_spike_region = -1
+        self.last_spike_multiplier = 1.0
  
         # track doses by age: each row = age bucket (oldest first)
         self.expiry_tracker = np.zeros((self.expiry_window, self.num_regions))
@@ -154,6 +175,8 @@ class FluVaccineEnv(gym.Env):
             "expired": expired,
             "storage_capacity": self.storage_capacity,
             "seasonal_multiplier": SEASONAL_CURVE[self.week - 1],
+            "catastrophic_spike_region": self.last_spike_region,
+            "catastrophic_spike_multiplier": self.last_spike_multiplier,
         }
  
         return state, reward, done, False, info

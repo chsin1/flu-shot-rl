@@ -347,6 +347,42 @@ main  ← always stable, team lead owns
 | `experiment/order-lead-time` | Orders arrive 2 weeks late, state expanded | Yes | Member B | Wk 5 |
 | `experiment/venue-type-regions` | Regions as hospital/clinic/pharmacy | Yes | Member B | Stretch |
 
+### Branch status: `experiment/value-iteration`
+
+This branch now includes a standalone value-iteration baseline in `vi_solver.py`.
+
+What changed:
+- Added an approximate dynamic programming solver for the flu vaccine problem
+- Reused the same 324-state discretisation style described for Q-Learning: 3 inventory buckets per region × 12 weeks
+- Added policy evaluation and artifact saving to support report comparisons
+
+Implementation notes:
+- The environment is continuous and stochastic, so the solver does not use an exact closed-form transition model
+- Instead, each state-action pair is evaluated by sampling one-step transitions from the real environment
+- The solver maps each discrete state to a representative inventory profile, estimates expected immediate reward plus next-state probabilities, and performs backward week-by-week value iteration
+- The script saves `flu_vi_values.npy` and `flu_vi_policy.pkl` after solving
+
+How to run:
+
+```bash
+python vi_solver.py
+```
+
+What the script does:
+- Solves the approximate DP baseline over the 324-state abstraction
+- Extracts a greedy policy over the discretised state space
+- Evaluates that policy for 100 episodes in the full environment
+- Prints reward, vaccinated, stockout, and expired summary statistics
+
+Current verification status:
+- Syntax-checked successfully
+- Smoke-tested on sampled state-action transitions
+- Ready for a full branch run and result capture
+
+Why this branch matters:
+- It gives the team a classical DP comparison point alongside PPO and Q-Learning
+- It helps answer whether a compact model-based approximation can compete with the learned policy on the same planning problem
+
 ---
 
 ## 10. Merging to Main

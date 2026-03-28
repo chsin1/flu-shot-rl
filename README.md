@@ -347,6 +347,36 @@ main  ← always stable, team lead owns
 | `experiment/order-lead-time` | Orders arrive 2 weeks late, state expanded | Yes | Member B | Wk 5 |
 | `experiment/venue-type-regions` | Regions as hospital/clinic/pharmacy | Yes | Member B | Stretch |
 
+### Branch status: `experiment/catastrophic-demand-spike`
+
+This branch is now implemented and retrained.
+
+What changed:
+- Added a rare catastrophic local outbreak event to `FluVaccineEnv`
+- On each week, there is a 5% chance that one randomly selected region's demand doubles
+- Spike metadata is exposed in `info` as `catastrophic_spike_region` and `catastrophic_spike_multiplier`
+- PPO was fully retrained after the environment change, following the train-freeze-retrain rule
+
+Implementation notes:
+- The spike is applied after the normal seasonal demand plus Gaussian noise is generated
+- The rest of the environment logic is unchanged: storage caps, FIFO usage, expiry, and reward calculation all remain consistent with the baseline branch
+- The event is intentionally rare so it behaves like a stress-test scenario rather than a new normal demand pattern
+
+Post-retrain evaluation:
+
+```
+Policy                                       Reward         Vaccinated           Stockout            Expired
+RL Agent (PPO)                     3452.2 ± 248.9   4131.0 ± 137.2     49.8 ±  67.0    332.6 ±  81.1
+Baseline: always order 300          -19.9 ± 334.6   4189.7 ± 152.4      0.0 ±   0.0   2665.1 ± 130.3
+Baseline: always order 100         2190.8 ± 271.5   3700.3 ± 105.9    483.6 ± 102.5    317.8 ±  82.1
+Baseline: random                    904.9 ± 875.2   4029.1 ± 230.3    142.4 ± 196.8   1789.1 ± 401.6
+```
+
+Interpretation:
+- PPO remains the best policy by average reward under the catastrophic spike scenario
+- The always-order-300 baseline still eliminates stockout, but performs poorly because expiry dominates the reward
+- This branch is ready for team review or comparison against the baseline branch
+
 ---
 
 ## 10. Merging to Main

@@ -43,9 +43,9 @@ vaccine expiry, and storage costs under stochastic seasonal demand.
 
 **On SB3 vs from scratch:**
 Q-Learning is written from scratch (~50 lines, pure Python, Bellman update).
-PPO and DQN use SB3 as a framework tool. The report clearly separates the two.
-This is equivalent to using PyTorch rather than writing CUDA — the algorithm
-understanding is demonstrated through Q-Learning.
+PPO uses SB3 as a framework tool. The report clearly separates the two.
+DQN was considered but excluded due to SB3's MultiDiscrete limitation —
+the algorithm is covered conceptually in the report instead.
 
 **On custom vs third-party environment:**
 We reviewed the OR-Gym Inventory environment and OR Library inventory management
@@ -60,12 +60,10 @@ project/
 ├── envs/
 │   └── flu_env.py        # Custom Gymnasium environment
 ├── train.py              # Train PPO (Stable-Baselines3)
-├── train_dqn.py          # Train DQN — single-region wrapper
 ├── qlearning.py          # Q-Learning from scratch
 ├── vi_solver.py          # Value iteration (classical DP)
 ├── evaluate.py           # Compare all policies, 100 episodes
 ├── flu_rl_model.zip      # Saved PPO model (after training)
-├── flu_dqn_model.zip     # Saved DQN model (after training)
 └── README.md
 ```
 
@@ -159,7 +157,7 @@ Multiplier: 0.4  0.6  0.8  1.0  1.2  1.4  1.4  1.1  0.9  0.7  0.5  0.3
 | Algorithm | Implemented by | State space | Purpose |
 |-----------|---------------|-------------|---------|
 | Q-Learning | Us — from scratch | Discretised (324 states) | Demonstrates Bellman update |
-| DQN | SB3 framework | Continuous (1 region) | Neural network Q-function |
+| DQN | SB3 framework — conceptual only | Not implemented | MultiDiscrete limitation — see report |
 | PPO | SB3 framework | Continuous (3 regions) | Main agent, full problem |
 | Value iteration | Us — from scratch | Discretised (324 states) | Classical DP baseline |
 
@@ -174,11 +172,15 @@ Q[s][a] = Q[s][a] + alpha * (reward + gamma * max(Q[s_next]) - Q[s][a])
 
 No SB3 used. This is the from-scratch implementation the assignment requires.
 
-### DQN (SB3)
+### DQN (SB3) — conceptual, not evaluated
 
 Extends Q-Learning with experience replay and a target network.
-SB3's DQN requires `Discrete` (not `MultiDiscrete`), so we use a
-single-region wrapper in `train_dqn.py` to demonstrate the algorithm.
+SB3's DQN requires a `Discrete` action space and does not support
+`MultiDiscrete([4,4,4])`. A single-region wrapper was considered but
+excluded — it would not be a fair comparison against PPO on the full
+three-region problem. DQN is covered conceptually in the report to
+explain the progression from tabular Q-Learning to deep RL. See the
+report for full rationale.
 
 ### PPO (SB3)
 
@@ -224,13 +226,6 @@ pip install gymnasium stable-baselines3 numpy
 python train.py
 ```
 Trains 500k timesteps, saves `flu_rl_model.zip`. Takes ~5-10 minutes.
-
-### Train DQN
-
-```bash
-python train_dqn.py
-```
-Single-region DQN wrapper, saves `flu_dqn_model.zip`.
 
 ### Run Q-Learning
 
@@ -526,7 +521,7 @@ Must have:
   ⚠️ Presentation                 ← Week 6
 
 Strong adds:
-  DQN comparison, catastrophic spike, order lead time, 9-policy table
+  Catastrophic spike, order lead time, 9-policy comparison table
 
 Distinction adds:
   Value iteration, Jupyter notebook, live simulation demo

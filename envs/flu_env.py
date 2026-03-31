@@ -2,8 +2,6 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 
-
-
  
 # Seasonal demand curve: bell-shaped peak around weeks 6-7 of a 12-week flu season.
 # Values are multipliers applied to each region's base demand.
@@ -21,15 +19,19 @@ SEASONAL_CURVE = np.array([
     0.7,   # week 10
     0.5,   # week 11
     0.3,   # week 12 — season winding down
-])
+], dtype=np.float32)
  
 # Base demand per region (doses/week at multiplier=1.0).
 # Different regions reflect different population sizes / uptake rates.
 # Region 0: large urban area  — high base demand
 # Region 1: mid-size town     — moderate base demand
 # Region 2: rural area        — lower base demand
-REGION_BASE_DEMAND = np.array([180.0, 130.0, 90.0])
- 
+REGION_BASE_DEMAND = np.array([180.0, 130.0, 90.0], dtype=np.float32)
+
+# --- NEW: vulnerability weights per region ---
+# Higher weight = higher penalty for stockout (public health priority)
+# Region 0: urban, Region 1: town (elderly), Region 2: rural (access issues)
+VULNERABILITY_WEIGHT = np.array([1.2, 2.0, 1.5], dtype=np.float32)
  
 class FluVaccineEnv(gym.Env):
  
@@ -42,6 +44,9 @@ class FluVaccineEnv(gym.Env):
         # action: order option for each region
         self.order_options = [0, 100, 300, 600]
         self.action_space = spaces.MultiDiscrete([4, 4, 4])
+
+        # penalise shortages more heavily in higher-priority regions
+        self.vulnerability_weights = VULNERABILITY_WEIGHT
  
         # fridge storage capacity per region (fixed, different per region)
         self.storage_capacity = np.array([800.0, 600.0, 1000.0])
@@ -153,9 +158,13 @@ class FluVaccineEnv(gym.Env):
  
         # --- 6. reward ---
         storage_cost = np.sum(self.inventory) * 0.01
+                
+        # weighted stockout penalty using vulnerability
+        weighted_stockout_penalty = float(np.sum(self.vulnerability_weights * stockout))
+
         reward = float(
             vaccinated.sum()
-            - 2.0 * stockout.sum()
+            - weighted_stockout_penalty 
             - 1.5 * expired.sum()
             - storage_cost
         )
@@ -177,6 +186,7 @@ class FluVaccineEnv(gym.Env):
             "seasonal_multiplier": SEASONAL_CURVE[self.week - 1],
             "catastrophic_spike_region": self.last_spike_region,
             "catastrophic_spike_multiplier": self.last_spike_multiplier,
+            "weighted_stockout_penalty": weighted_stockout_penalty,
         }
  
         return state, reward, done, False, info

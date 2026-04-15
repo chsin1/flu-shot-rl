@@ -8,7 +8,7 @@ Stable-Baselines3 to satisfy the assignment requirement of
 demonstrating RL algorithm understanding.
 
 State discretisation:
-  Continuous 16-dim state → compact discrete state index
+  Continuous 13-dim state → compact discrete state index
   Each region's inventory mapped to 3 levels: low / medium / high
   Week kept as-is (0–11)
   Total states: 3^3 inventory levels × 12 weeks = 324 states

@@ -1,93 +1,112 @@
 """
 evaluate.py — Full policy comparison for Flu Vaccine Resource Management
-MMAI-845 Group Project
 
-Runs 100 episodes per policy and prints three comparison tables:
-  1. Full policy comparison (reward, vaccinated, stockout, expired)
-  2. Reward breakdown (each reward term separately)
-  3. Per-region stockout breakdown
+Supports multiple environment presets:
+  - baseline
+  - realistic
 
-Policies evaluated (9 total):
-  Learned:      PPO (SB3), Q-Learning (scratch), Value Iteration (classical DP)
-  Rule-based:   Reorder point, Seasonal schedule, Vulnerability first
-  Naive:        Always order 300, Always order 100, Random
+Runs policy comparisons over 100 episodes and prints:
+  1. Full policy comparison
+  2. Reward breakdown
+  3. Stockout by region
 """
 
-from stable_baselines3 import PPO
-from envs.flu_env import FluVaccineEnv, VULNERABILITY_WEIGHT, SEASONAL_CURVE
-import numpy as np
-import pickle
+import argparse
 import os
+import pickle
+
+import numpy as np
+from stable_baselines3 import PPO
+
+from envs.make_env import make_env
 
 
-# ── Episode runner ────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
+# Episode runner
+# ---------------------------------------------------------------------
 
 def run_episodes(env, policy_fn, label, n_episodes=100):
-    """Run n_episodes of a policy and collect metrics."""
-    rewards            = []
-    vaccinated_list    = []
-    stockout_list      = []
-    expired_list       = []
+    """Run n_episodes of a policy and collect summary metrics."""
+    rewards = []
+    vaccinated_list = []
+    stockout_list = []
+    expired_list = []
     weighted_penalty_list = []
-    stockout_per_region   = np.zeros(env.num_regions)
-    reward_breakdown   = {"vaccinated": [], "wtd_stockout": [], "expired": [], "storage": []}
+    stockout_per_region = np.zeros(env.num_regions, dtype=np.float64)
+
+    reward_breakdown = {
+        "vaccinated": [],
+        "wtd_stockout": [],
+        "expired": [],
+        "storage": [],
+    }
 
     for ep in range(n_episodes):
-        obs, info = env.reset()
+        obs, info = env.reset(seed=ep)
         done = False
-        total_reward = ep_vacc = ep_wtd = ep_exp = ep_stor = 0
-        total_vaccinated = total_stockout = total_expired = total_wtd = 0
+
+        total_reward = 0.0
+        total_vaccinated = 0.0
+        total_stockout = 0.0
+        total_expired = 0.0
+        total_wtd = 0.0
+
+        ep_vacc = 0.0
+        ep_wtd = 0.0
+        ep_exp = 0.0
+        ep_stor = 0.0
 
         while not done:
             action = policy_fn(obs, info, env)
             obs, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
 
-            total_reward     += reward
-            total_vaccinated += info['vaccinated'].sum()
-            total_stockout   += info['stockout'].sum()
-            total_expired    += info['expired'].sum()
-            total_wtd        += info['weighted_stockout_penalty']
-            stockout_per_region += info['stockout']
+            total_reward += reward
+            total_vaccinated += info["vaccinated"].sum()
+            total_stockout += info["stockout"].sum()
+            total_expired += info["expired"].sum()
+            total_wtd += info["weighted_stockout_penalty"]
+            stockout_per_region += info["stockout"]
 
-            ep_vacc += info['vaccinated'].sum()
-            ep_wtd  += info['weighted_stockout_penalty']
-            ep_exp  += info['expired'].sum() * 1.5
-            ep_stor += info['inventory'].sum() * 0.01
+            ep_vacc += info["vaccinated"].sum()
+            ep_wtd += info["weighted_stockout_penalty"]
+            ep_exp += info["expired"].sum() * 1.5
+            ep_stor += info["inventory"].sum() * 0.01
 
         rewards.append(total_reward)
         vaccinated_list.append(total_vaccinated)
         stockout_list.append(total_stockout)
         expired_list.append(total_expired)
         weighted_penalty_list.append(total_wtd)
+
         reward_breakdown["vaccinated"].append(ep_vacc)
         reward_breakdown["wtd_stockout"].append(ep_wtd)
         reward_breakdown["expired"].append(ep_exp)
         reward_breakdown["storage"].append(ep_stor)
 
     return {
-        "label":               label,
-        "reward_mean":         np.mean(rewards),
-        "reward_std":          np.std(rewards),
-        "vaccinated_mean":     np.mean(vaccinated_list),
-        "vaccinated_std":      np.std(vaccinated_list),
-        "stockout_mean":       np.mean(stockout_list),
-        "stockout_std":        np.std(stockout_list),
-        "expired_mean":        np.mean(expired_list),
-        "expired_std":         np.std(expired_list),
-        "wtd_penalty_mean":    np.mean(weighted_penalty_list),
-        "wtd_penalty_std":     np.std(weighted_penalty_list),
+        "label": label,
+        "reward_mean": float(np.mean(rewards)),
+        "reward_std": float(np.std(rewards)),
+        "vaccinated_mean": float(np.mean(vaccinated_list)),
+        "vaccinated_std": float(np.std(vaccinated_list)),
+        "stockout_mean": float(np.mean(stockout_list)),
+        "stockout_std": float(np.std(stockout_list)),
+        "expired_mean": float(np.mean(expired_list)),
+        "expired_std": float(np.std(expired_list)),
+        "wtd_penalty_mean": float(np.mean(weighted_penalty_list)),
+        "wtd_penalty_std": float(np.std(weighted_penalty_list)),
         "stockout_per_region": stockout_per_region / n_episodes,
-        "breakdown":           {k: np.mean(v) for k, v in reward_breakdown.items()},
+        "breakdown": {k: float(np.mean(v)) for k, v in reward_breakdown.items()},
     }
 
 
-# ── Policy definitions ────────────────────────────────────────────────────────
-
-# --- Learned policies ---
+# ---------------------------------------------------------------------
+# Learned policies
+# ---------------------------------------------------------------------
 
 def make_ppo_policy(model):
-    """Policy 1: PPO agent trained via Stable-Baselines3."""
+    """PPO policy loaded from Stable-Baselines3."""
     def policy(obs, info, env):
         action, _ = model.predict(obs, deterministic=True)
         return action
@@ -96,26 +115,28 @@ def make_ppo_policy(model):
 
 def make_qlearning_policy(q_table, all_actions):
     """
-    Policy 2: Q-Learning — implemented from scratch.
-    Loads the trained Q-table and acts greedily.
-    State is discretised: inventory → 3 levels, week = obs[-1].
+    Q-Learning policy using the same 324-state discretisation as qlearning.py.
+
+    This abstraction is most appropriate for the baseline environment.
     """
-    INV_THRESHOLDS = [150, 350]
+    inv_thresholds = [150, 350]
 
     def discretise(v):
-        if v < INV_THRESHOLDS[0]:   return 0
-        elif v < INV_THRESHOLDS[1]: return 1
-        else:                        return 2
+        if v < inv_thresholds[0]:
+            return 0
+        if v < inv_thresholds[1]:
+            return 1
+        return 2
 
     def state_to_index(obs):
-        i0   = discretise(obs[0])
-        i1   = discretise(obs[1])
-        i2   = discretise(obs[2])
-        week = min(int(obs[-1]), 11)   # obs[-1] = week, always last element
+        i0 = discretise(obs[0])
+        i1 = discretise(obs[1])
+        i2 = discretise(obs[2])
+        week = min(int(obs[-1]), 11)
         return i0 * 3 * 3 * 12 + i1 * 3 * 12 + i2 * 12 + week
 
     def policy(obs, info, env):
-        s          = state_to_index(obs)
+        s = state_to_index(obs)
         action_idx = int(np.argmax(q_table[s]))
         return list(all_actions[action_idx])
 
@@ -124,103 +145,82 @@ def make_qlearning_policy(q_table, all_actions):
 
 def make_vi_policy(vi_policy_array, all_actions):
     """
-    Policy 3: Value Iteration — classical DP on discretised state.
-    Expects:
-      - vi_policy_array: NumPy array of shape (324,)
-      - each entry is an action index into all_actions
+    Value Iteration policy using the same 324-state abstraction as vi_solver.py.
+
+    This abstraction is most appropriate for the baseline environment.
     """
-    INV_THRESHOLDS = [150, 350]
+    inv_thresholds = [150, 350]
 
     def discretise(v):
-        if v < INV_THRESHOLDS[0]:
+        if v < inv_thresholds[0]:
             return 0
-        elif v < INV_THRESHOLDS[1]:
+        if v < inv_thresholds[1]:
             return 1
-        else:
-            return 2
+        return 2
 
     def encode_state(i0, i1, i2, week):
-        """
-        Flatten (i0, i1, i2, week) into a single index.
-        State count = 3 * 3 * 3 * 12 = 324
-        """
         return (((i0 * 3 + i1) * 3 + i2) * 12 + week)
 
     def policy(obs, info, env):
-        i0   = discretise(obs[0])
-        i1   = discretise(obs[1])
-        i2   = discretise(obs[2])
+        i0 = discretise(obs[0])
+        i1 = discretise(obs[1])
+        i2 = discretise(obs[2])
         week = min(int(obs[-1]), 11)
 
         state_idx = encode_state(i0, i1, i2, week)
-
-        # action index from VI table
         action_idx = int(vi_policy_array[state_idx])
-
-        # convert action index to actual 3-region action
-        action = all_actions[action_idx]
-
-        return list(action)
-        print("VI debug:", (i0, i1, i2, week), "->", state_idx, "->", action_idx, "->", action)
+        return list(all_actions[action_idx])
 
     return policy
 
 
-
-# --- Rule-based policies ---
+# ---------------------------------------------------------------------
+# Rule-based and naive policies
+# ---------------------------------------------------------------------
 
 def fixed_300_policy(obs, info, env):
-    """Policy 5: always order 300 doses per region."""
+    """Always order 300 doses per region."""
     return np.array([2, 2, 2])
 
 
 def fixed_100_policy(obs, info, env):
-    """Policy 6: always order 100 doses per region."""
+    """Always order 100 doses per region."""
     return np.array([1, 1, 1])
 
 
 def random_policy(obs, info, env):
-    """Policy 7: random order quantity per region."""
+    """Random order quantity per region."""
     return env.action_space.sample()
 
 
 def reorder_point_policy(obs, info, env):
     """
-    Policy 8: reorder point.
-    Orders 300 when inventory drops below 200. Otherwise nothing.
-    Classic inventory management threshold rule.
+    Reorder point policy:
+    order 300 when inventory drops below 200, else order 0.
     """
-    inventory = info.get("inventory", np.array([300, 300, 300]))
-    return np.array([2 if inventory[i] < 200 else 0
-                     for i in range(env.num_regions)])
+    inventory = info.get("inventory", np.array([300, 300, 300], dtype=np.float32))
+    return np.array([2 if inventory[i] < 200 else 0 for i in range(env.num_regions)])
 
 
 def seasonal_schedule_policy(obs, info, env):
     """
-    Policy 9: seasonal schedule.
-    Pre-planned order calendar aligned with the 12-week flu curve.
-    Orders heavily in weeks 3-5, tapers after week 8.
+    Pre-planned schedule aligned to the flu curve.
 
-    Week:   1    2    3    4    5    6    7    8    9   10   11   12
-    Doses: 100  100  300  600  600  300  300  100  100    0    0    0
+    Week index uses obs[-1].
     """
-    schedule  = [1, 1, 2, 3, 3, 2, 2, 1, 1, 0, 0, 0]
-    week_idx  = min(int(obs[-1]), 11)   # obs[-1] = week, always last element
-    order     = schedule[week_idx]
+    schedule = [1, 1, 2, 3, 3, 2, 2, 1, 1, 0, 0, 0]
+    week_idx = min(int(obs[-1]), 11)
+    order = schedule[week_idx]
     return np.array([order, order, order])
 
 
 def vulnerability_first_policy(obs, info, env):
     """
-    Policy 10: vulnerability-first allocation.
-    Prioritises highest-vulnerability region (Region 1, 2.0x) when
-    stock is tight. Grounded in NACI 2024-2025 guidance.
-
-    Priority: Region 1 (2.0x) > Region 2 (1.5x) > Region 0 (1.2x)
+    Prioritise the highest-vulnerability region when stock is tight.
     """
-    inventory = info.get("inventory", np.array([300, 300, 300]))
-    priority  = np.argsort(VULNERABILITY_WEIGHT)[::-1]   # highest vuln first
-    action    = np.array([1, 1, 1])
+    inventory = info.get("inventory", np.array([300, 300, 300], dtype=np.float32))
+    priority = np.argsort(env.vulnerability_weights)[::-1]
+    action = np.array([1, 1, 1])
 
     for rank, region in enumerate(priority):
         if inventory[region] < 150:
@@ -233,80 +233,102 @@ def vulnerability_first_policy(obs, info, env):
     return action
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
+# Loading helpers
+# ---------------------------------------------------------------------
 
 def load_qlearning(prefix="flu_ql"):
-    """Load Q-table and action list saved by qlearning.py."""
+    """
+    Load Q-table and action list saved by qlearning.py.
+
+    Expected files:
+      <prefix>_qtable.npy
+      <prefix>_policy.pkl
+    """
     qtable_path = f"{prefix}_qtable.npy"
     policy_path = f"{prefix}_policy.pkl"
-    if not os.path.exists(qtable_path):
+
+    if not os.path.exists(qtable_path) or not os.path.exists(policy_path):
         return None, None
-    Q = np.load(qtable_path)
+
+    q_table = np.load(qtable_path)
     with open(policy_path, "rb") as f:
-        _ = pickle.load(f)   # policy dict (unused — we re-derive from Q)
-    all_actions = [(a0, a1, a2)
-                   for a0 in range(4)
-                   for a1 in range(4)
-                   for a2 in range(4)]
-    return Q, all_actions
+        _ = pickle.load(f)
+
+    all_actions = [
+        (a0, a1, a2)
+        for a0 in range(4)
+        for a1 in range(4)
+        for a2 in range(4)
+    ]
+    return q_table, all_actions
 
 
 def load_vi(prefix="flu_vi"):
-    """Load value iteration policy saved by vi_solver.py."""
+    """
+    Load Value Iteration policy saved by vi_solver.py.
+
+    Expected file:
+      <prefix>_policy.pkl
+    """
     policy_path = f"{prefix}_policy.pkl"
     if not os.path.exists(policy_path):
         return None
+
     with open(policy_path, "rb") as f:
         vi_policy = pickle.load(f)
     return vi_policy
 
 
-def print_table(results, n_episodes):
+# ---------------------------------------------------------------------
+# Printing helpers
+# ---------------------------------------------------------------------
+
+def print_table(results, n_episodes, env_name):
     col = 36
 
-    # ── Main comparison ───────────────────────────────────────────────
-    print(f"\n{'=' * 105}")
-    print(f"  FULL POLICY COMPARISON ({n_episodes} episodes, mean ± std)")
-    print(f"{'=' * 105}")
-    print(f"{'Policy':<{col}} {'Type':<12} {'Reward':>16} {'Vaccinated':>14} {'Stockout':>12} {'Expired':>12}")
-    print(f"{'-' * 105}")
+    print(f"\n{'=' * 108}")
+    print(f"  FULL POLICY COMPARISON ({n_episodes} episodes, mean ± std) — env={env_name}")
+    print(f"{'=' * 108}")
+    print(f"{'Policy':<{col}} {'Type':<14} {'Reward':>16} {'Vaccinated':>14} {'Stockout':>12} {'Expired':>12}")
+    print(f"{'-' * 108}")
 
     type_map = {
-        "PPO":                    "Learned",
-        "Q-Learning":             "Learned",
-        "Value Iteration":        "Classical DP",
-        "Always order 300":       "Naive",
-        "Always order 100":       "Naive",
-        "Random":                 "Naive",
-        "Reorder point":          "Rule-based",
-        "Seasonal schedule":      "Rule-based",
-        "Vulnerability first":    "Rule-based",
+        "PPO": "Learned",
+        "Q-Learning": "Learned",
+        "Value Iteration": "Classical DP",
+        "Always order 300": "Naive",
+        "Always order 100": "Naive",
+        "Random": "Naive",
+        "Reorder point": "Rule-based",
+        "Seasonal schedule": "Rule-based",
+        "Vulnerability first": "Rule-based",
     }
 
-    best_reward = max(r['reward_mean'] for r in results)
-    for r in sorted(results, key=lambda x: x['reward_mean'], reverse=True):
-        ptype = next((v for k, v in type_map.items() if k in r['label']), "")
-        marker = " <-- BEST" if abs(r['reward_mean'] - best_reward) < 0.01 else ""
+    best_reward = max(r["reward_mean"] for r in results)
+
+    for r in sorted(results, key=lambda x: x["reward_mean"], reverse=True):
+        ptype = next((v for k, v in type_map.items() if k in r["label"]), "")
+        marker = " <-- BEST" if abs(r["reward_mean"] - best_reward) < 1e-9 else ""
         print(
             f"{r['label']:<{col}} "
-            f"{ptype:<12} "
-            f"{r['reward_mean']:>7.1f} ±{r['reward_std']:>5.1f} "
-            f"{r['vaccinated_mean']:>6.1f} ±{r['vaccinated_std']:>4.1f} "
-            f"{r['stockout_mean']:>5.1f} ±{r['stockout_std']:>4.1f} "
-            f"{r['expired_mean']:>5.1f} ±{r['expired_std']:>4.1f}"
+            f"{ptype:<14} "
+            f"{r['reward_mean']:>7.1f} ±{r['reward_std']:>6.1f} "
+            f"{r['vaccinated_mean']:>6.1f} ±{r['vaccinated_std']:>5.1f} "
+            f"{r['stockout_mean']:>5.1f} ±{r['stockout_std']:>5.1f} "
+            f"{r['expired_mean']:>5.1f} ±{r['expired_std']:>5.1f}"
             f"{marker}"
         )
-    print(f"{'=' * 105}")
+    print(f"{'=' * 108}")
 
-    # ── Reward breakdown ──────────────────────────────────────────────
-    print(f"\n{'=' * 85}")
-    print(f"  REWARD BREAKDOWN (avg per episode)")
-    print(f"  reward = +vaccinated − wtd_stockout − expired_cost − storage_cost")
-    print(f"{'=' * 85}")
+    print(f"\n{'=' * 88}")
+    print("  REWARD BREAKDOWN (avg per episode)")
+    print("  reward = +vaccinated − wtd_stockout − expired_cost − storage_cost")
+    print(f"{'=' * 88}")
     print(f"{'Policy':<{col}} {'Vaccinated':>12} {'Wtd Stockout':>14} {'Expired Cost':>14} {'Storage':>10}")
-    print(f"{'-' * 85}")
-    for r in sorted(results, key=lambda x: x['reward_mean'], reverse=True):
-        bd = r['breakdown']
+    print(f"{'-' * 88}")
+    for r in sorted(results, key=lambda x: x["reward_mean"], reverse=True):
+        bd = r["breakdown"]
         print(
             f"{r['label']:<{col}} "
             f"{bd['vaccinated']:>12.1f} "
@@ -314,109 +336,182 @@ def print_table(results, n_episodes):
             f"{bd['expired']:>14.1f} "
             f"{bd['storage']:>10.1f}"
         )
-    print(f"{'=' * 85}")
+    print(f"{'=' * 88}")
 
-    # ── Per-region stockout ───────────────────────────────────────────
-    print(f"\n{'=' * 76}")
-    print(f"  STOCKOUT BY REGION (avg doses/episode)")
-    print(f"{'=' * 76}")
-    print(f"{'Policy':<{col}} {'R0 urban':>10} {'R1 town':>10} {'R2 rural':>10}")
-    print(f"{'':>{col}} {'(1.2x)':>10} {'(2.0x)':>10} {'(1.5x)':>10}")
-    print(f"{'-' * 76}")
-    for r in sorted(results, key=lambda x: x['reward_mean'], reverse=True):
-        sr = r['stockout_per_region']
+    print(f"\n{'=' * 78}")
+    print("  STOCKOUT BY REGION (avg doses/episode)")
+    print(f"{'=' * 78}")
+    print(f"{'Policy':<{col}} {'R0':>10} {'R1':>10} {'R2':>10}")
+    print(f"{'':>{col}} {'(urban)':>10} {'(town)':>10} {'(rural)':>10}")
+    print(f"{'-' * 78}")
+    for r in sorted(results, key=lambda x: x["reward_mean"], reverse=True):
+        sr = r["stockout_per_region"]
         print(f"{r['label']:<{col}} {sr[0]:>10.1f} {sr[1]:>10.1f} {sr[2]:>10.1f}")
-    print(f"{'=' * 76}")
+    print(f"{'=' * 78}")
 
-    # ── RL vs human-designed rules ────────────────────────────────────
-    rl = next((r for r in results if "PPO" in r['label']), None)
+    rl = next((r for r in results if "PPO" in r["label"]), None)
     if rl:
         rule_labels = ["Reorder point", "Seasonal schedule", "Vulnerability first"]
-        human = [r for r in results if any(lb in r['label'] for lb in rule_labels)]
-        print(f"\nRL Agent (PPO) vs human-designed rules:")
+        human = [r for r in results if any(lb in r["label"] for lb in rule_labels)]
+        print("\nRL Agent (PPO) vs human-designed rules:")
         for h in human:
-            diff = rl['reward_mean'] - h['reward_mean']
+            diff = rl["reward_mean"] - h["reward_mean"]
             direction = "better" if diff > 0 else "worse"
             print(f"  vs {h['label']:<42} {direction} by {abs(diff):.1f} pts")
 
-    # ── RL vs classical ───────────────────────────────────────────────
-    if rl:
-        classical = [r for r in results if any(lb in r['label']
-                     for lb in ["Q-Learning", "Value Iteration"])]
+        classical = [r for r in results if any(lb in r["label"] for lb in ["Q-Learning", "Value Iteration"])]
         if classical:
-            print(f"\nRL Agent (PPO) vs classical RL / DP methods:")
+            print("\nRL Agent (PPO) vs classical RL / DP methods:")
             for c in classical:
-                diff = rl['reward_mean'] - c['reward_mean']
+                diff = rl["reward_mean"] - c["reward_mean"]
                 direction = "better" if diff > 0 else "worse"
                 print(f"  vs {c['label']:<42} {direction} by {abs(diff):.1f} pts")
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+def show_policy_behavior(policy_fn, env, label="Policy Behavior"):
+    """Show one episode of order decisions for quick sanity checking."""
+    action_map = {0: 0, 1: 100, 2: 300, 3: 600}
+
+    obs, info = env.reset(seed=123)
+    done = False
+    week = 0
+
+    print(f"\n=== {label} (1 Episode) ===")
+    while not done:
+        action = policy_fn(obs, info, env)
+        mapped_action = [action_map[int(a)] for a in action]
+
+        print(
+            f"Week {week + 1}: "
+            f"Orders={mapped_action}, "
+            f"Inventory={np.round(obs[:3], 1)}"
+        )
+
+        obs, reward, terminated, truncated, info = env.step(action)
+        done = terminated or truncated
+        week += 1
+
+
+# ---------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Evaluate all policies on the flu vaccine environment."
+    )
+    parser.add_argument(
+        "--env",
+        choices=["baseline", "realistic"],
+        default="baseline",
+        help="Environment preset to use.",
+    )
+    parser.add_argument(
+        "--episodes",
+        type=int,
+        default=100,
+        help="Number of evaluation episodes per policy.",
+    )
+    parser.add_argument(
+        "--show-ppo-behavior",
+        action="store_true",
+        help="Print one PPO episode trajectory for sanity checking.",
+    )
+    args = parser.parse_args()
 
-    N_EPISODES = 100
-    env        = FluVaccineEnv()
+    env_name = args.env
+    n_episodes = args.episodes
+    env = make_env(env_name)
 
-    print(f"\nVulnerability weights: "
-          f"Region 0={VULNERABILITY_WEIGHT[0]:.1f}x  "
-          f"Region 1={VULNERABILITY_WEIGHT[1]:.1f}x  "
-          f"Region 2={VULNERABILITY_WEIGHT[2]:.1f}x")
+    print(
+        f"\nEnvironment preset: {env_name}"
+        f"\nLead time: {env.lead_time_weeks} week(s)"
+        f"\nDemand noise std: {env.demand_noise_std}"
+        f"\nCatastrophic spike: {env.use_catastrophic_spike}"
+        f" (p={env.catastrophic_spike_prob}, x{env.catastrophic_spike_multiplier})"
+    )
+    print(
+        f"Vulnerability weights: "
+        f"Region 0={env.vulnerability_weights[0]:.1f}x  "
+        f"Region 1={env.vulnerability_weights[1]:.1f}x  "
+        f"Region 2={env.vulnerability_weights[2]:.1f}x"
+    )
 
-    # ── Load models ───────────────────────────────────────────────────
+    if env_name == "realistic":
+        print(
+            "\nNote: Q-Learning and Value Iteration still use the simplified "
+            "324-state discretisation, so their comparison is most defensible "
+            "on the baseline environment."
+        )
+
     policy_configs = []
 
-    # Policy 1: PPO
-    if os.path.exists("flu_rl_model.zip"):
-        ppo_model = PPO.load("flu_rl_model")
-        policy_configs.append((make_ppo_policy(ppo_model), "RL Agent (PPO)"))
-        print("  Loaded: PPO model")
-    else:
-        print("  Skipped: flu_rl_model.zip not found — run train.py first")
+    # PPO
+    ppo_model_path = f"flu_rl_model_{env_name}.zip"
+    if os.path.exists(ppo_model_path):
+        ppo_model = PPO.load(f"flu_rl_model_{env_name}")
+        ppo_policy = make_ppo_policy(ppo_model)
+        policy_configs.append((ppo_policy, "RL Agent (PPO)"))
+        print(f"  Loaded: PPO model ({ppo_model_path})")
 
-    # Policy 2: Q-Learning from scratch
-    Q, all_actions = load_qlearning("flu_ql")
-    if Q is not None:
-        policy_configs.append((make_qlearning_policy(Q, all_actions), "Q-Learning (scratch)"))
-        print("  Loaded: Q-Learning Q-table")
+        if args.show_ppo_behavior:
+            behavior_env = make_env(env_name)
+            show_policy_behavior(ppo_policy, behavior_env, "PPO Policy Behavior")
     else:
-        print("  Skipped: flu_ql_qtable.npy not found — run qlearning.py first")
+        print(f"  Skipped: {ppo_model_path} not found — run train.py --env {env_name} first")
 
-    # Policy 3: Value Iteration
-    vi_policy = load_vi("flu_vi")
+    # Q-Learning
+    q_prefix = "flu_ql" if env_name == "baseline" else f"flu_ql_{env_name}"
+    q_table, all_actions = load_qlearning(q_prefix)
+    if q_table is not None:
+        policy_configs.append((make_qlearning_policy(q_table, all_actions), "Q-Learning (scratch)"))
+        print(f"  Loaded: Q-Learning Q-table ({q_prefix})")
+    else:
+        print(f"  Skipped: {q_prefix}_qtable.npy not found")
+
+    # Value Iteration
+    vi_prefix = "flu_vi" if env_name == "baseline" else f"flu_vi_{env_name}"
+    vi_policy = load_vi(vi_prefix)
     if vi_policy is not None:
-        all_actions_vi = [(a0, a1, a2)
-                          for a0 in range(4)
-                          for a1 in range(4)
-                          for a2 in range(4)]
+        all_actions_vi = [
+            (a0, a1, a2)
+            for a0 in range(4)
+            for a1 in range(4)
+            for a2 in range(4)
+        ]
         policy_configs.append((make_vi_policy(vi_policy, all_actions_vi), "Value Iteration (DP)"))
-        print("  Loaded: Value Iteration policy")
+        print(f"  Loaded: Value Iteration policy ({vi_prefix})")
     else:
-        print("  Skipped: flu_vi_policy.pkl not found — run vi_solver.py first")
+        print(f"  Skipped: {vi_prefix}_policy.pkl not found")
 
-    # Policies 5-10: rule-based and naive
+    # Rule-based and naive policies
     policy_configs += [
-        (fixed_300_policy,          "Always order 300"),
-        (fixed_100_policy,          "Always order 100"),
-        (random_policy,             "Random"),
-        (reorder_point_policy,      "Reorder point (<200→300)"),
-        (seasonal_schedule_policy,  "Seasonal schedule"),
-        (vulnerability_first_policy,"Vulnerability first (NACI)"),
+        (fixed_300_policy, "Always order 300"),
+        (fixed_100_policy, "Always order 100"),
+        (random_policy, "Random"),
+        (reorder_point_policy, "Reorder point (<200→300)"),
+        (seasonal_schedule_policy, "Seasonal schedule"),
+        (vulnerability_first_policy, "Vulnerability first (NACI)"),
     ]
 
-    # ── Run all policies ──────────────────────────────────────────────
-    print(f"\nRunning {N_EPISODES} episodes per policy...\n")
+    if not policy_configs:
+        raise RuntimeError("No policies available to evaluate.")
+
+    print(f"\nRunning {n_episodes} episodes per policy...\n")
+
     results = []
     for policy_fn, label in policy_configs:
         print(f"  Evaluating: {label}...")
-        results.append(run_episodes(env, policy_fn, label, N_EPISODES))
+        eval_env = make_env(env_name)
+        results.append(run_episodes(eval_env, policy_fn, label, n_episodes))
 
-    # ── Print all tables ──────────────────────────────────────────────
-    print_table(results, N_EPISODES)
+    print_table(results, n_episodes, env_name)
 
-    best = max(results, key=lambda x: x['reward_mean'])
-    print(f"\nBest policy by avg reward: {best['label']} "
-          f"({best['reward_mean']:.1f} ± {best['reward_std']:.1f})")
+    best = max(results, key=lambda x: x["reward_mean"])
+    print(
+        f"\nBest policy by avg reward: {best['label']} "
+        f"({best['reward_mean']:.1f} ± {best['reward_std']:.1f})"
+    )
 
 
 if __name__ == "__main__":

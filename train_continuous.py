@@ -62,6 +62,7 @@ if make_env_continuous is None:
         ) from exc
 
 
+
 class RewardLoggerCallback(BaseCallback):
     """Lightweight callback to print rollout reward progress during training."""
 
@@ -133,6 +134,7 @@ def build_env(env_name: str, check: bool = False):
     return vec_env
 
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Train PPO on the continuous-action flu vaccine environment."
@@ -200,6 +202,7 @@ def main():
     save_name = f"flu_rl_model_continuous_{env_name}"
     save_zip = f"{save_name}.zip"
 
+
     preview_env = make_env_continuous(env_name)
     print(
         f"\nContinuous environment preset: {env_name}"
@@ -221,8 +224,8 @@ def main():
         f"Region 2={preview_env.vulnerability_weights[2]:.1f}x"
     )
     print(
-        f"Action range per region: "
-        f"[{preview_env.action_space.low[0]:.0f}, {preview_env.action_space.high[0]:.0f}] doses"
+        f"Action range per region: normalised "
+        f"[{preview_env.action_space.low[0]:.0f}, {preview_env.action_space.high[0]:.0f}] scaled internally to doses"
     )
     print(f"Observation shape: {preview_env.observation_space.shape}")
 

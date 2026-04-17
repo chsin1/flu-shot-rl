@@ -129,6 +129,7 @@ Baseline Environment
 
 Realistic Environment
 | Policy |	Reward |
+| :--- | :--- |
 | Random | 1596 (Best) |
 | PPO (continuous) | 971 |
 | Reorder Point	| 825 |

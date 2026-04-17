@@ -399,6 +399,9 @@ def main():
     n_episodes = args.episodes
     env = make_continuous_env(env_name)
 
+    print("Eval action space:", env.action_space)
+
+
     print(
         f"\nContinuous environment preset: {env_name}"
         f"\nLead time: {env.lead_time_weeks} week(s)"

@@ -21,12 +21,15 @@ To answer this, we design two environments:
 - a simplified baseline environment where system dynamics are stable and predictable
 - a realistic environment with stochastic demand, supply delays, and uncertainty
 
-We evaluate Reinforcement Learning (PPO) against:
+We evaluate:
 - Classical Dynamic Programming (Value Iteration)
-- Tabular Reinforcement Learning (Q-Learning)
+- Tabular RL (Q-Learning)
+- Deep RL (PPO)
 - Rule-based and heuristic policies
 
-The goal is not only to compare performance, but to understand how different methods behave as environmental complexity increases.
+Across two environments:
+- Baseline: simplified, predictable system
+- Realistic: delayed supply + high uncertainty
 
 ## 3. Environment Design (`FluVaccineEnv`)
 To test our algorithms, we built a custom Gymnasium environment simulating a 12-week flu season across three distinct regions (Urban, Town, Rural). The environment enforces universal global constraints, including strict 4-week FIFO expiry tracking. 
@@ -47,18 +50,29 @@ The agent receives a continuously updated snapshot of all three regions:
 
 *Note: Regional vulnerability weights (1.2x, 2.0x, 1.5x) are fixed constants and are purposefully excluded from the state space to avoid redundant representation; they are encoded directly into the reward function instead.*
 
-### Action Space: `MultiDiscrete`
-Each of the 3 regions independently and simultaneously selects an order quantity of 0, 100, 300, or 600 doses, requiring the agent to navigate **64 unique combinations per week**.
+### Action Space: 
+`Discrete (Baseline Model)`
+- Options: {0, 100, 300, 600}
+- Total combinations: 64 per week
+
+`Continuous (Extension)`
+- Rang: 0-600 doses per region
+- Normalised to [0,1] for stable learning
 
 ### Reward Function
 `Reward = Vaccinated - Weighted_Stockout - (1.5 × Expired) - (0.01 × Inventory)`
 This aligns the agent with NACI public health guidelines by heavily penalizing stockouts in vulnerable regions, while applying a 1.5x penalty to expired doses to discourage over-ordering.
 
 ## 5. Algorithms Evaluated
-*   **Deep RL (PPO):** The main agent. Uses an actor-critic architecture to natively handle the 13-D continuous state and 64-action MultiDiscrete space without a transition model.
-*   **Classical DP (Value Iteration):** An approximate model-based planner. Required discretizing the environment into 324 states.
-*   **Tabular RL (Q-Learning):** A from-scratch implementation (324 states) to demonstrate Bellman updates.
-*   **Baselines:** Reorder Point (<200→300), Seasonal Schedule, Vulnerability First, and Naive strategies (Always 100, Always 300).
+*   **Discrete Action Setting:** 
+- PPO (Deep RL)
+- Value Iteration (DP)
+- Q-Learning (Tabular)
+- Rule-based policies
+
+*   **Continuous Action Setting (Extension):** 
+- PPO (continuous control)
+- Continuous rule-based baselines
 
 ## 6. Setup and Installation
 
@@ -80,13 +94,14 @@ pip install -r requirements.txt
 ```
 
 ## 7. Key Results (100 Episodes)
+### 1. Discrete Setting
 The algorithms were evaluated across both the Baseline and Realistic environments to test breaking points.
 
 ### Baseline Environment (Simplified Logistics)
 *In the simplified environment, classical model-based planning outperforms RL.*
 | Policy | Type | Mean Reward |
 | :--- | :--- | :--- |
-| **Value Iteration (DP)** | Classical DP | **3516.4 ± 353.8** (Best)  |
+| **Value Iteration (DP)**  | Classical DP | **3516.4 ± 353.8** (Best)  |
 | **RL Agent (PPO)** | Learned | **3455.8 ± 278.9**  |
 | Reorder Point (<200→300) | Rule-based | 3414.1 ± 280.7  |
 | Always Order 100 | Naive | 2507.0 ± 265.7  |
@@ -103,6 +118,23 @@ The algorithms were evaluated across both the Baseline and Realistic environment
 | Always Order 300 | Naive | 1307.9 ± 477.8  |
 | **Value Iteration (DP)** | Classical DP | **-5087.0 ± 342.1** (Fails)  |
 
+### 2. Continuous Setting
+Baseline Environment
+| Policy | Reward | Stockout | Expired |
+| :--- | :--- | :--- | :--- |
+| PPO (continuous)  | 3158	| 31.6 | 901
+| Reorder Point | 2373 | 13.7 | 1708
+
+👉 PPO reduces expiry significantly while maintaining service levels.
+
+Realistic Environment
+| Policy |	Reward |
+| Random | 1596 (Best) |
+| PPO (continuous) | 971 |
+| Reorder Point	| 825 |
+
+👉 Continuous PPO performance drops under uncertainty.
+
 ## 8. Key Findings & Policy Insights
 ### 1. Value Iteration Wins in Simple Environments, Fails in Reality
 Value Iteration achieved the highest reward (3516.4) in the Baseline because its discretized transition model was perfectly suited to immediate order fulfillment. However, when delayed supply (2-week lead times) and stochastic shocks (10%) were introduced, the transition model became completely unreliable, causing the algorithm to plummet to a catastrophic score of -5087.0.
@@ -110,8 +142,23 @@ Value Iteration achieved the highest reward (3516.4) in the Baseline because its
 ### 2. PPO Learns Dynamically Robust Defenses
 PPO's learned behavior organically adapted between environments. In the Baseline, it settled into a conservative rhythm, largely ordering `` and spiking only when inventory dropped. Conversely, in the Realistic environment, it learned that it could not react fast enough to 2-week delays. PPO organically shifted to a rigid `` structure almost every week, dynamically balancing the trade-off by actively building large buffers in the most volatile regions to survive demand shocks.
 
-### 3. Naive Policies Force Unacceptable Trade-Offs
-Simply ordering 300 doses completely eliminates public health stockout risks, but results in massive logistical waste (averaging 1,890 to 2,649 expired doses per episode). PPO was the only model to successfully learn to balance these competing objectives.
+### 3. Continuous Control Requires Proper Scaling
+Initial PPO attempts failed due to poor action scaling.
+Normalization ([0,1] → doses) was critical for learning meaningful policies.
+
+### 4. Flexibility vs Robustness Trade-off
+Environment	Best Approach
+Baseline	PPO (optimized)
+Realistic	Random (robust)
+
+👉  Insight:
+PPO is efficient but fragile
+Random is robust under uncertainty
+
+### 5. Regional Failure Mode
+PPO struggled under realistic settings:
+Severe under-supply in rural region
+High stockout due to delayed supply
 
 ## 9. The Path Forward
 The MDP framework built here serves as foundational architecture for deployment-ready logistics AI.
@@ -120,9 +167,14 @@ The MDP framework built here serves as foundational architecture for deployment-
 *   **Phase 3:** Real-World Integration (Ingesting live data for deployment).
 
 ## 10. Conclusion
-Vaccine allocation is a sequential decision problem under uncertainty. This research demonstrates that while classical dynamic programming is highly effective for simplified, predictable logistics, Deep RL (PPO) provides a far superior, scalable, and dynamically robust solution for real-world uncertainty where the environment cannot be reliably modeled . 
+Vaccine allocation is a complex sequential decision problem.
+- Classical DP works in simple environments
+- PPO scales better under uncertainty
+- Continuous control improves efficiency
+- BUT real-world deployment requires robustness to uncertainty
 
 ## 11. How to Run
+### Discrete Models
 ```bash
 # Train PPO
 python train.py --env baseline
@@ -140,8 +192,15 @@ python evaluate.py --env baseline
 
 # Evaluate PPO + VI (and available policies) in realistic environment
 python evaluate.py --env realistic
-
 ```
+### Continuous Models
+```bash
+python train_continuous.py --env baseline 
+python train_continuous.py --env realistic 
+python evaluate_continuous.py --env baseline 
+python evaluate_continuous.py --env realistic
+```
+
 ## 12. Monitoring Training (TensorBoard)
 PPO training logs are recorded for both baseline and realistic environments and can be visualized using TensorBoard.
 ```bash

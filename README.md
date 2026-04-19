@@ -93,43 +93,30 @@ These actions are internally scaled to:
 ### Discrete Reward
 The discrete setting uses the original reward structure:
 
-\[
-R_t
-=
-\sum_{r=1}^{3} V_{r,t}
--
-\sum_{r=1}^{3} w_r SO_{r,t}
--
-1.5\sum_{r=1}^{3} E_{r,t}
--
-0.01\sum_{r=1}^{3} I_{r,t}
-\]
+Discrete reward
+
+R_t = sum(V_r,t)
+    - sum(w_r * SO_r,t)
+    - 1.5 * sum(E_r,t)
+    - 0.01 * sum(I_r,t)
 
 ### Continuous Reward
 The final continuous setting uses:
 
-\[
-R_t
-=
-\sum_{r=1}^{3} V_{r,t}
--
-\sum_{r=1}^{3} w_r SO_{r,t}
--
-1.5\sum_{r=1}^{3} E_{r,t}
--
-0.01\sum_{r=1}^{3} I_{r,t}
--
-\lambda \sum_{r=1}^{3} w_r \max(S_r - I_{r,t}, 0)
-\]
+R_t = sum(V_r,t)
+    - sum(w_r * SO_r,t)
+    - 1.5 * sum(E_r,t)
+    - 0.01 * sum(I_r,t)
+    - λ * sum(w_r * max(S_r - I_r,t, 0))
 
 Where:
-- \(V_{r,t}\) = vaccinated doses
-- \(SO_{r,t}\) = stockout
-- \(E_{r,t}\) = expired doses
-- \(I_{r,t}\) = ending inventory
-- \(w_r\) = regional vulnerability weight
-- \(S_r\) = safety-stock target
-- \(\lambda\) = understock penalty coefficient
+V_r,t = vaccinated doses
+SO_r,t = stockout
+E_r,t = expired doses
+I_r,t = ending inventory
+w_r = regional vulnerability weight
+S_r = safety-stock target
+λ = understock penalty coefficient
 
 ### Realistic Continuous Parameters
 For the current realistic continuous setup:

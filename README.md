@@ -314,12 +314,6 @@ python evaluate.py --env baseline --save-results discrete_baseline_results.json
 python evaluate.py --env realistic --save-results discrete_realistic_results.json
 ```
 
-### Evaluate Discrete Policies and Save Text Output
-```bash
-python evaluate.py --env baseline | tee discrete_baseline_output.txt
-python evaluate.py --env realistic | tee discrete_realistic_output.txt
-```
-
 ### Train Continuous PPO
 ```bash
 python train_continuous.py --env baseline
@@ -331,22 +325,8 @@ python evaluate_continuous.py --env baseline --save-results continuous_baseline_
 python evaluate_continuous.py --env realistic --save-results continuous_realistic_results.json
 ```
 
-### Evaluate Continuous Policies and Save Text Output
-```bash
-python evaluate_continuous.py --env baseline --save-output continuous_baseline_output.txt
-python evaluate_continuous.py --env realistic --save-output continuous_realistic_output.txt
-```
-
 ## 13. TensorBoard
 PPO training logs can be visualized with TensorBoard.
-
-### Discrete PPO Logs
-- `ppo_tensorboard/baseline/`
-- `ppo_tensorboard/realistic/`
-
-### Continuous PPO Logs
-- `ppo_tensorboard/continuous_baseline/`
-- `ppo_tensorboard/continuous_realistic/`
 
 Launch TensorBoard with:
 ```bash

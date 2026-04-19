@@ -24,8 +24,6 @@ Typical usage:
 from __future__ import annotations
 
 import argparse
-import os
-from typing import Optional
 
 import numpy as np
 from stable_baselines3 import PPO
@@ -109,9 +107,10 @@ class EpisodeTraceCallback(BaseCallback):
         while not done:
             action, _ = self.model.predict(obs, deterministic=True)
             action = np.asarray(action, dtype=np.float32).reshape(env.num_regions)
+            displayed_orders = np.round(action * 600.0 / 10.0) * 10.0
             print(
                 f"Week {week + 1}: "
-                f"Orders={np.round(action, 1)}, "
+                f"Orders={displayed_orders}, "
                 f"Inventory={np.round(obs[:3], 1)}"
             )
             obs, reward, terminated, truncated, info = env.step(action)
@@ -241,6 +240,7 @@ def main():
         seed=args.seed,
         verbose=1,
         device=args.device,
+        tensorboard_log=f"./ppo_tensorboard/continuous_{env_name}/",
     )
 
     callbacks = [RewardLoggerCallback(print_freq=10_000)]
@@ -252,7 +252,11 @@ def main():
         f"\nModel save path: {save_zip}\n"
     )
 
-    model.learn(total_timesteps=args.timesteps, callback=callbacks)
+    model.learn(
+        total_timesteps=args.timesteps,
+        callback=callbacks,
+        tb_log_name=f"ppo_flu_vaccine_continuous_{env_name}",
+    )
     model.save(save_name)
 
     print(f"\nSaved PPO model to: {save_zip}")

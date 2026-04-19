@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Optional
 
 @dataclass
 class EnvConfig:
@@ -31,6 +31,12 @@ class EnvConfig:
     # 0 = immediate delivery (baseline), >0 = delayed supply (realistic)
     lead_time_weeks: int = 0
 
+    # New fields for reward shaping
+    understock_penalty_coef: float= 0.0
+    safety_stock: Optional[Tuple[float, ...]] = None
+    vulnerability_weights: Optional[Tuple[float, ...]] = None
+    weighted_understock: bool = True
+
 
 BASELINE_CONFIG = EnvConfig(
     # Matches the current assignment-friendly setup
@@ -39,6 +45,9 @@ BASELINE_CONFIG = EnvConfig(
     use_catastrophic_spike=True,
     catastrophic_spike_prob=0.05,
     catastrophic_spike_multiplier=2.0,
+    understock_penalty_coef=0.0,
+    safety_stock=[180.0, 130.0, 90.0],
+    vulnerability_weights=[1.2, 2.0, 1.5],
 )
 
 REALISTIC_CONFIG = EnvConfig(
@@ -48,4 +57,8 @@ REALISTIC_CONFIG = EnvConfig(
     use_catastrophic_spike=True,
     catastrophic_spike_prob=0.10,
     catastrophic_spike_multiplier=2.0,
+    understock_penalty_coef=0.6,
+    safety_stock=[180.0, 150.0, 220.0],
+    vulnerability_weights=[1.2, 1.8, 2.8],
+    weighted_understock=True,
 )

@@ -24,7 +24,10 @@ Typical usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
+import json
 import os
+import sys
 from typing import Callable, Dict, List, Tuple
 
 import numpy as np
@@ -66,6 +69,17 @@ def make_continuous_env(env_name: str) -> FluVaccineEnvContinuous:
 # ---------------------------------------------------------------------
 
 
+def doses_to_action(doses, env) -> np.ndarray:
+    """
+    Convert dose quantities into the environment's normalized Box action.
+
+    The continuous environment expects values in [0, 1] and internally scales
+    them to [0, 600] doses per region.
+    """
+    doses = np.asarray(doses, dtype=np.float32).reshape(env.num_regions)
+    return np.clip(doses / 600.0, env.action_space.low, env.action_space.high)
+
+
 def run_episodes(env, policy_fn: Callable, label: str, n_episodes: int = 100) -> Dict:
     """Run n_episodes of a policy and collect summary metrics."""
     rewards: List[float] = []
@@ -81,6 +95,7 @@ def run_episodes(env, policy_fn: Callable, label: str, n_episodes: int = 100) ->
         "wtd_stockout": [],
         "expired": [],
         "storage": [],
+        "understock": [],
     }
 
     for ep in range(n_episodes):
@@ -99,6 +114,8 @@ def run_episodes(env, policy_fn: Callable, label: str, n_episodes: int = 100) ->
         ep_wtd = 0.0
         ep_exp = 0.0
         ep_stor = 0.0
+        ep_under = 0.0
+        week = 0
 
         while not done:
             action = policy_fn(obs, info, env)
@@ -106,6 +123,21 @@ def run_episodes(env, policy_fn: Callable, label: str, n_episodes: int = 100) ->
 
             obs, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
+
+            week += 1
+
+            if ep == 0:
+                print(
+                    f"Week {week}: "
+                    f"Orders={np.round(info.get('orders_placed', action), 1)}, "
+                    f"Demand={np.round(info.get('demand'), 1)}, "
+                    f"Vaccinated={np.round(info.get('vaccinated'), 1)}, "
+                    f"Stockout={np.round(info.get('stockout'), 1)}, "
+                    f"Expired={np.round(info.get('expired'), 1)}, "
+                    f"Inventory={np.round(info.get('inventory'), 1)}, "
+                    f"UnderstockPenalty={info.get('understock_penalty', 0.0):.1f}, "
+                    f"Reward={reward:.1f}"
+                )
 
             total_reward += reward
             total_vaccinated += float(info["vaccinated"].sum())
@@ -126,6 +158,9 @@ def run_episodes(env, policy_fn: Callable, label: str, n_episodes: int = 100) ->
             ep_wtd += float(info["weighted_stockout_penalty"])
             ep_exp += float(info["expired"].sum()) * 1.5
             ep_stor += float(info["inventory"].sum()) * 0.01
+            ep_under += float(info.get("understock_penalty", 0.0)) * float(
+                getattr(env, "understock_penalty_coef", 0.0)
+            )
 
         rewards.append(total_reward)
         vaccinated_list.append(total_vaccinated)
@@ -138,6 +173,7 @@ def run_episodes(env, policy_fn: Callable, label: str, n_episodes: int = 100) ->
         reward_breakdown["wtd_stockout"].append(ep_wtd)
         reward_breakdown["expired"].append(ep_exp)
         reward_breakdown["storage"].append(ep_stor)
+        reward_breakdown["understock"].append(ep_under)
 
     return {
         "label": label,
@@ -181,13 +217,13 @@ def make_ppo_policy(model):
 
 def fixed_300_policy(obs, info, env):
     """Always order 300 doses per region."""
-    return np.array([300.0, 300.0, 300.0], dtype=np.float32)
+    return doses_to_action([300.0, 300.0, 300.0], env)
 
 
 
 def fixed_100_policy(obs, info, env):
     """Always order 100 doses per region."""
-    return np.array([100.0, 100.0, 100.0], dtype=np.float32)
+    return doses_to_action([100.0, 100.0, 100.0], env)
 
 
 
@@ -203,10 +239,11 @@ def reorder_point_policy(obs, info, env):
     order 300 when inventory drops below 200, else order 0.
     """
     inventory = info.get("inventory", np.array([300.0, 300.0, 300.0], dtype=np.float32))
-    return np.array(
+    doses = np.array(
         [300.0 if inventory[i] < 200.0 else 0.0 for i in range(env.num_regions)],
         dtype=np.float32,
     )
+    return doses_to_action(doses, env)
 
 
 
@@ -219,7 +256,7 @@ def seasonal_schedule_policy(obs, info, env):
     schedule = [100.0, 100.0, 300.0, 600.0, 600.0, 300.0, 300.0, 100.0, 100.0, 0.0, 0.0, 0.0]
     week_idx = min(int(obs[-1]), 11)
     order = schedule[week_idx]
-    return np.array([order, order, order], dtype=np.float32)
+    return doses_to_action([order, order, order], env)
 
 
 
@@ -241,7 +278,7 @@ def vulnerability_first_policy(obs, info, env):
         else:
             action[region] = 0.0 if rank == 2 else 100.0
 
-    return action.astype(np.float32)
+    return doses_to_action(action, env)
 
 
 
@@ -253,8 +290,8 @@ def capacity_fill_policy(obs, info, env):
     """
     inventory = info.get("inventory", np.array([300.0, 300.0, 300.0], dtype=np.float32))
     gap = np.maximum(env.storage_capacity - inventory, 0.0)
-    high = np.asarray(env.action_space.high, dtype=np.float32)
-    return np.minimum(gap, high).astype(np.float32)
+    capped_gap = np.minimum(gap, 600.0)
+    return doses_to_action(capped_gap, env)
 
 
 # ---------------------------------------------------------------------
@@ -304,9 +341,12 @@ def print_table(results: List[Dict], n_episodes: int, env_name: str):
 
     print(f"\n{'=' * 88}")
     print("  REWARD BREAKDOWN (avg per episode)")
-    print("  reward = +vaccinated − wtd_stockout − expired_cost − storage_cost")
+    print("  reward = +vaccinated − wtd_stockout − expired_cost − storage_cost − understock_cost")
     print(f"{'=' * 88}")
-    print(f"{'Policy':<{col}} {'Vaccinated':>12} {'Wtd Stockout':>14} {'Expired Cost':>14} {'Storage':>10}")
+    print(
+        f"{'Policy':<{col}} {'Vaccinated':>12} {'Wtd Stockout':>14} "
+        f"{'Expired Cost':>14} {'Storage':>10} {'Understock':>12}"
+    )
     print(f"{'-' * 88}")
     for r in sorted(results, key=lambda x: x["reward_mean"], reverse=True):
         bd = r["breakdown"]
@@ -315,7 +355,8 @@ def print_table(results: List[Dict], n_episodes: int, env_name: str):
             f"{bd['vaccinated']:>12.1f} "
             f"{bd['wtd_stockout']:>14.1f} "
             f"{bd['expired']:>14.1f} "
-            f"{bd['storage']:>10.1f}"
+            f"{bd['storage']:>10.1f} "
+            f"{bd['understock']:>12.1f}"
         )
     print(f"{'=' * 88}")
 
@@ -356,15 +397,50 @@ def show_policy_behavior(policy_fn: Callable, env, label: str = "Policy Behavior
     print(f"\n=== {label} (1 Episode) ===")
     while not done:
         action = np.asarray(policy_fn(obs, info, env), dtype=np.float32).reshape(env.num_regions)
+        displayed_orders = np.round(action * 600.0 / 10.0) * 10.0
         print(
             f"Week {week + 1}: "
-            f"Orders={np.round(action, 1)}, "
+            f"Orders={displayed_orders}, "
             f"Inventory={np.round(obs[:3], 1)}"
         )
 
         obs, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
         week += 1
+
+
+def save_results(path: str, env_name: str, n_episodes: int, results: List[Dict]) -> None:
+    """Save evaluation results to a JSON file for reporting."""
+    payload = {
+        "env": env_name,
+        "episodes": n_episodes,
+        "results": [
+            {
+                **result,
+                "stockout_per_region": result["stockout_per_region"].tolist(),
+            }
+            for result in results
+        ],
+    }
+
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
+
+
+class TeeWriter:
+    """Mirror printed output to stdout and an optional text file."""
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, data: str) -> int:
+        for stream in self.streams:
+            stream.write(data)
+        return len(data)
+
+    def flush(self) -> None:
+        for stream in self.streams:
+            stream.flush()
 
 
 # ---------------------------------------------------------------------
@@ -393,87 +469,109 @@ def main():
         action="store_true",
         help="Print one PPO episode trajectory for sanity checking.",
     )
+    parser.add_argument(
+        "--save-results",
+        type=str,
+        help="Optional JSON path to save evaluation results.",
+    )
+    parser.add_argument(
+        "--save-output",
+        type=str,
+        help="Optional text file path to save the printed console output.",
+    )
     args = parser.parse_args()
 
-    env_name = args.env
-    n_episodes = args.episodes
-    env = make_continuous_env(env_name)
+    output_handle = None
+    output_context = contextlib.nullcontext()
+    if args.save_output:
+        output_handle = open(args.save_output, "w", encoding="utf-8")
+        output_context = contextlib.redirect_stdout(TeeWriter(sys.stdout, output_handle))
 
-    print("Eval action space:", env.action_space)
+    with output_context:
+        env_name = args.env
+        n_episodes = args.episodes
+        env = make_continuous_env(env_name)
 
+        print("Eval action space:", env.action_space)
 
-    print(
-        f"\nContinuous environment preset: {env_name}"
-        f"\nLead time: {env.lead_time_weeks} week(s)"
-        f"\nDemand noise std: {env.demand_noise_std}"
-        f"\nCatastrophic spike: {env.use_catastrophic_spike}"
-        f" (p={env.catastrophic_spike_prob}, x{env.catastrophic_spike_multiplier})"
-    )
-    print(
-        f"Storage capacity: "
-        f"Region 0={env.storage_capacity[0]:.0f}  "
-        f"Region 1={env.storage_capacity[1]:.0f}  "
-        f"Region 2={env.storage_capacity[2]:.0f}"
-    )
-    print(
-        f"Vulnerability weights: "
-        f"Region 0={env.vulnerability_weights[0]:.1f}x  "
-        f"Region 1={env.vulnerability_weights[1]:.1f}x  "
-        f"Region 2={env.vulnerability_weights[2]:.1f}x"
-    )
-    print(
-        f"Action range per region: "
-        f"[{env.action_space.low[0]:.0f}, {env.action_space.high[0]:.0f}] doses"
-    )
-
-    policy_configs: List[Tuple[Callable, str]] = []
-
-    # PPO
-    ppo_model_path = f"flu_rl_model_continuous_{env_name}.zip"
-    if os.path.exists(ppo_model_path):
-        ppo_model = PPO.load(f"flu_rl_model_continuous_{env_name}")
-        ppo_policy = make_ppo_policy(ppo_model)
-        policy_configs.append((ppo_policy, "RL Agent (PPO continuous)"))
-        print(f"  Loaded: PPO model ({ppo_model_path})")
-
-        if args.show_ppo_behavior:
-            behavior_env = make_continuous_env(env_name)
-            show_policy_behavior(ppo_policy, behavior_env, "PPO Continuous Policy Behavior")
-    else:
         print(
-            f"  Skipped: {ppo_model_path} not found — "
-            f"run train_continuous.py --env {env_name} first"
+            f"\nContinuous environment preset: {env_name}"
+            f"\nLead time: {env.lead_time_weeks} week(s)"
+            f"\nDemand noise std: {env.demand_noise_std}"
+            f"\nCatastrophic spike: {env.use_catastrophic_spike}"
+            f" (p={env.catastrophic_spike_prob}, x{env.catastrophic_spike_multiplier})"
+        )
+        print(
+            f"Storage capacity: "
+            f"Region 0={env.storage_capacity[0]:.0f}  "
+            f"Region 1={env.storage_capacity[1]:.0f}  "
+            f"Region 2={env.storage_capacity[2]:.0f}"
+        )
+        print(
+            f"Vulnerability weights: "
+            f"Region 0={env.vulnerability_weights[0]:.1f}x  "
+            f"Region 1={env.vulnerability_weights[1]:.1f}x  "
+            f"Region 2={env.vulnerability_weights[2]:.1f}x"
+        )
+        print(
+            f"Action range per region: normalized "
+            f"[{env.action_space.low[0]:.0f}, {env.action_space.high[0]:.0f}] "
+            f"(scaled internally to 0..600 doses)"
         )
 
-    # Rule-based and naive policies
-    policy_configs += [
-        (fixed_300_policy, "Always order 300"),
-        (fixed_100_policy, "Always order 100"),
-        (random_policy, "Random"),
-        (reorder_point_policy, "Reorder point (<200→300)"),
-        (seasonal_schedule_policy, "Seasonal schedule"),
-        (vulnerability_first_policy, "Vulnerability first (NACI)"),
-        (capacity_fill_policy, "Capacity fill"),
-    ]
+        policy_configs: List[Tuple[Callable, str]] = []
 
-    if not policy_configs:
-        raise RuntimeError("No policies available to evaluate.")
+        ppo_model_path = f"flu_rl_model_continuous_{env_name}.zip"
+        if os.path.exists(ppo_model_path):
+            ppo_model = PPO.load(f"flu_rl_model_continuous_{env_name}")
+            ppo_policy = make_ppo_policy(ppo_model)
+            policy_configs.append((ppo_policy, "RL Agent (PPO continuous)"))
+            print(f"  Loaded: PPO model ({ppo_model_path})")
 
-    print(f"\nRunning {n_episodes} episodes per policy...\n")
+            if args.show_ppo_behavior:
+                behavior_env = make_continuous_env(env_name)
+                show_policy_behavior(ppo_policy, behavior_env, "PPO Continuous Policy Behavior")
+        else:
+            print(
+                f"  Skipped: {ppo_model_path} not found — "
+                f"run train_continuous.py --env {env_name} first"
+            )
 
-    results = []
-    for policy_fn, label in policy_configs:
-        print(f"  Evaluating: {label}...")
-        eval_env = make_continuous_env(env_name)
-        results.append(run_episodes(eval_env, policy_fn, label, n_episodes))
+        policy_configs += [
+            (fixed_300_policy, "Always order 300"),
+            (fixed_100_policy, "Always order 100"),
+            (random_policy, "Random"),
+            (reorder_point_policy, "Reorder point (<200→300)"),
+            (seasonal_schedule_policy, "Seasonal schedule"),
+            (vulnerability_first_policy, "Vulnerability first (NACI)"),
+            (capacity_fill_policy, "Capacity fill"),
+        ]
 
-    print_table(results, n_episodes, env_name)
+        if not policy_configs:
+            raise RuntimeError("No policies available to evaluate.")
 
-    best = max(results, key=lambda x: x["reward_mean"])
-    print(
-        f"\nBest policy by avg reward: {best['label']} "
-        f"({best['reward_mean']:.1f} ± {best['reward_std']:.1f})"
-    )
+        print(f"\nRunning {n_episodes} episodes per policy...\n")
+
+        results = []
+        for policy_fn, label in policy_configs:
+            print(f"  Evaluating: {label}...")
+            eval_env = make_continuous_env(env_name)
+            results.append(run_episodes(eval_env, policy_fn, label, n_episodes))
+
+        print_table(results, n_episodes, env_name)
+
+        if args.save_results:
+            save_results(args.save_results, env_name, n_episodes, results)
+            print(f"\nSaved evaluation results to: {args.save_results}")
+
+        best = max(results, key=lambda x: x["reward_mean"])
+        print(
+            f"\nBest policy by avg reward: {best['label']} "
+            f"({best['reward_mean']:.1f} ± {best['reward_std']:.1f})"
+        )
+
+    if output_handle is not None:
+        output_handle.close()
 
 
 if __name__ == "__main__":

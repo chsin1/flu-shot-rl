@@ -25,8 +25,8 @@ SEASONAL_CURVE = np.array([
 # Base demand per region (doses/week at multiplier=1.0)
 REGION_BASE_DEMAND = np.array([180.0, 130.0, 90.0], dtype=np.float32)
 
-# Public-health weighting for stockout penalty
-VULNERABILITY_WEIGHT = np.array([1.2, 2.0, 1.5], dtype=np.float32)
+# Default public-health weighting for stockout penalty
+DEFAULT_VULNERABILITY_WEIGHT = np.array([1.2, 2.0, 1.5], dtype=np.float32)
 
 
 class FluVaccineEnvContinuous(gym.Env):
@@ -37,13 +37,15 @@ class FluVaccineEnvContinuous(gym.Env):
       inventory(3) + expiring_soon(3) + storage_capacity(3) + demand_level(3) + week(1)
 
     Action:
-      MultiDiscrete([4, 4, 4]) -> order option per region
+      Box([0, 1]^3) -> normalized order quantity per region,
+      scaled internally to 0..600 doses
 
     Reward:
       vaccinated
       - weighted stockout penalty
       - expiry penalty
       - storage holding cost
+      - understock penalty
     """
 
     metadata = {"render_modes": []}
@@ -64,7 +66,12 @@ class FluVaccineEnvContinuous(gym.Env):
         self.catastrophic_spike_multiplier = config.catastrophic_spike_multiplier
         self.lead_time_weeks = config.lead_time_weeks
 
-        self.vulnerability_weights = VULNERABILITY_WEIGHT.astype(np.float32)
+        if config.vulnerability_weights is None:
+            self.vulnerability_weights = DEFAULT_VULNERABILITY_WEIGHT.astype(np.float32)
+        else:
+            self.vulnerability_weights = np.array(
+                config.vulnerability_weights, dtype=np.float32
+            )
 
         # Action: chnage the action space to a continuous environment
         self.action_space = spaces.Box(
@@ -72,7 +79,6 @@ class FluVaccineEnvContinuous(gym.Env):
             high=np.ones(self.num_regions, dtype=np.float32),
             dtype=np.float32,
         )
-        
 
         # Observation: 13-dimensional continuous vector
         self.observation_space = spaces.Box(
@@ -96,6 +102,16 @@ class FluVaccineEnvContinuous(gym.Env):
         # For reporting rare spikes
         self.last_spike_region = -1
         self.last_spike_multiplier = 1.0
+
+        # New reward-shaping parameters from config
+        self.understock_penalty_coef = config.understock_penalty_coef
+        self.weighted_understock = config.weighted_understock
+
+        if config.safety_stock is None:
+            self.safety_stock = np.array([180.0, 130.0, 90.0], dtype=np.float32)
+        else:
+            self.safety_stock = np.array(config.safety_stock, dtype=np.float32)
+
 
     def _seasonal_demand(self) -> np.ndarray:
         """
@@ -215,11 +231,29 @@ class FluVaccineEnvContinuous(gym.Env):
             np.sum(self.vulnerability_weights * stockout)
         )
 
+        # Penalty for leaving inventory below a target safety level.
+        # This makes the policy more proactive instead of only reacting after stockout happens.
+        
+        understock_gap = np.maximum(self.safety_stock - self.inventory, 0.0)
+        if self.weighted_understock:
+            understock_penalty = float(
+                np.sum(self.vulnerability_weights * understock_gap)
+            )
+        else:
+            understock_penalty = float(np.sum(understock_gap))
+
+        # Final reward:
+        # + vaccinations
+        # - weighted stockout
+        # - expiry
+        # - storage holding cost
+        # - understock penalty (new)
         reward = float(
             vaccinated.sum()
             - weighted_stockout_penalty
             - 1.5 * expired.sum()
             - storage_cost
+            - self.understock_penalty_coef * understock_penalty
         )
 
         # --- 9. advance week ---
@@ -242,6 +276,8 @@ class FluVaccineEnvContinuous(gym.Env):
             "catastrophic_spike_region": self.last_spike_region,
             "catastrophic_spike_multiplier": float(self.last_spike_multiplier),
             "weighted_stockout_penalty": weighted_stockout_penalty,
+            "storage_cost": storage_cost,
+            "understock_penalty": understock_penalty,
         }
 
         return state, reward, terminated, truncated, info

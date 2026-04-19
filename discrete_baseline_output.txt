@@ -1,0 +1,79 @@
+
+Environment preset: baseline
+Lead time: 0 week(s)
+Demand noise std: 20.0
+Catastrophic spike: True (p=0.05, x2.0)
+Vulnerability weights: Region 0=1.2x  Region 1=2.0x  Region 2=1.5x
+  Loaded: PPO model (flu_rl_model_baseline.zip)
+  Loaded: Q-Learning Q-table (flu_ql)
+  Skipped: flu_vi_policy.pkl not found
+
+Running 100 episodes per policy...
+
+  Evaluating: RL Agent (PPO)...
+  Evaluating: Q-Learning (scratch)...
+  Evaluating: Always order 300...
+  Evaluating: Always order 100...
+  Evaluating: Random...
+  Evaluating: Reorder point (<200→300)...
+  Evaluating: Seasonal schedule...
+  Evaluating: Vulnerability first (NACI)...
+
+============================================================================================================
+  FULL POLICY COMPARISON (100 episodes, mean ± std) — env=baseline
+============================================================================================================
+Policy                               Type                     Reward     Vaccinated     Stockout      Expired
+------------------------------------------------------------------------------------------------------------
+RL Agent (PPO)                       Learned         3477.8 ± 267.2 4161.7 ±141.1  56.5 ± 67.0 328.5 ± 78.5 <-- BEST
+Reorder point (<200→300)             Rule-based      3414.1 ± 280.7 4191.0 ±157.3  27.1 ± 32.8 445.1 ± 96.8
+Always order 100                     Naive           2507.0 ± 265.7 3706.9 ±104.4 511.2 ±111.5 319.9 ± 79.3
+Vulnerability first (NACI)           Rule-based      2117.2 ± 291.5 3634.4 ±137.6 583.7 ±105.4 491.2 ±105.8
+Seasonal schedule                    Rule-based      2003.9 ± 319.4 4209.3 ±154.1   8.8 ± 22.0 1370.7 ±118.6
+Q-Learning (scratch)                 Learned         1080.6 ± 377.4 4197.4 ±147.4  20.7 ± 44.7 1939.1 ±178.2
+Random                               Naive           1043.4 ± 789.7 4058.4 ±231.8 159.8 ±186.6 1753.3 ±396.4
+Always order 300                     Naive             32.7 ± 348.0 4218.1 ±159.3   0.0 ±  0.0 2649.1 ±133.4
+============================================================================================================
+
+========================================================================================
+  REWARD BREAKDOWN (avg per episode)
+  reward = +vaccinated − wtd_stockout − expired_cost − storage_cost
+========================================================================================
+Policy                                 Vaccinated   Wtd Stockout   Expired Cost    Storage
+----------------------------------------------------------------------------------------
+RL Agent (PPO)                             4161.7          109.0          492.7       82.2
+Reorder point (<200→300)                   4191.0           33.7          667.6       75.6
+Always order 100                           3706.9          654.7          479.8       65.4
+Vulnerability first (NACI)                 3634.4          700.5          736.8       80.0
+Seasonal schedule                          4209.3           10.7         2056.1      138.7
+Q-Learning (scratch)                       4197.4           40.8         2908.6      167.4
+Random                                     4058.4          232.5         2630.0      152.5
+Always order 300                           4218.1            0.0         3973.7      211.7
+========================================================================================
+
+==============================================================================
+  STOCKOUT BY REGION (avg doses/episode)
+==============================================================================
+Policy                                       R0         R1         R2
+                                        (urban)     (town)    (rural)
+------------------------------------------------------------------------------
+RL Agent (PPO)                              5.0       51.5        0.0
+Reorder point (<200→300)                   25.2        1.1        0.9
+Always order 100                          459.7       51.5        0.0
+Vulnerability first (NACI)                583.7        0.0        0.0
+Seasonal schedule                           8.6        0.1        0.1
+Q-Learning (scratch)                        0.7       19.9        0.1
+Random                                    105.5       49.1        5.2
+Always order 300                            0.0        0.0        0.0
+==============================================================================
+
+RL Agent (PPO) vs human-designed rules:
+  vs Reorder point (<200→300)                   better by 63.7 pts
+  vs Seasonal schedule                          better by 1473.9 pts
+  vs Vulnerability first (NACI)                 better by 1360.6 pts
+
+RL Agent (PPO) vs classical RL / DP methods:
+  vs Q-Learning (scratch)                       better by 2397.2 pts
+
+Saved evaluation results to: discrete_baseline_results.json
+
+Best policy by avg reward: RL Agent (PPO) (3477.8 ± 267.2)

@@ -1,0 +1,174 @@
+Eval action space: Box(0.0, 1.0, (3,), float32)
+
+Continuous environment preset: realistic
+Lead time: 2 week(s)
+Demand noise std: 30.0
+Catastrophic spike: True (p=0.1, x2.0)
+Storage capacity: Region 0=800  Region 1=600  Region 2=1000
+Vulnerability weights: Region 0=1.2x  Region 1=1.8x  Region 2=2.8x
+Action range per region: normalized [0, 1] (scaled internally to 0..600 doses)
+  Loaded: PPO model (flu_rl_model_continuous_realistic.zip)
+
+Running 100 episodes per policy...
+
+  Evaluating: RL Agent (PPO continuous)...
+Week 1: Orders=[600. 600. 600.], Demand=[82.8 91.1 64.4], Vaccinated=[82.8 91.1 64.4], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[217.2 208.9 235.6], UnderstockPenalty=0.0, Reward=231.8
+Week 2: Orders=[600. 600. 600.], Demand=[70.  59.3 55.2], Vaccinated=[70.  59.3 55.2], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[147.1 149.6 180.3], UnderstockPenalty=151.2, Reward=89.1
+Week 3: Orders=[600. 600. 600.], Demand=[137.4  66.6  50. ], Vaccinated=[137.4  66.6  50. ], Stockout=[0. 0. 0.], Expired=[  9.7  83.  130.3], Inventory=[600.  450.4 600. ], UnderstockPenalty=0.0, Reward=-96.8
+Week 4: Orders=[450. 580. 350.], Demand=[170.5 142.3 242.6], Vaccinated=[170.5 142.3 242.6], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[629.5 457.7 757.4], UnderstockPenalty=0.0, Reward=537.0
+Week 5: Orders=[340. 490. 230.], Demand=[257.  136.  118.5], Vaccinated=[257.  136.  118.5], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[543.  464.  881.5], UnderstockPenalty=0.0, Reward=492.7
+Week 6: Orders=[110. 280.  60.], Demand=[254.8 159.7  98.3], Vaccinated=[254.8 159.7  98.3], Stockout=[0. 0. 0.], Expired=[  0.   12.3 140.6], Inventory=[545.2 428.  761.1], UnderstockPenalty=0.0, Reward=266.2
+Week 7: Orders=[190. 340. 100.], Demand=[258.6 151.7 119.7], Vaccinated=[258.6 151.7 119.7], Stockout=[0. 0. 0.], Expired=[  0.    0.  280.3], Inventory=[541.4 448.3 591.1], UnderstockPenalty=0.0, Reward=93.8
+Week 8: Orders=[330. 460. 290.], Demand=[214.2 149.4 109.7], Vaccinated=[214.2 149.4 109.7], Stockout=[0. 0. 0.], Expired=[  0.    0.  132.9], Inventory=[437.2 450.6 408.5], UnderstockPenalty=0.0, Reward=261.0
+Week 9: Orders=[600. 600. 500.], Demand=[158.1 140.5 125.8], Vaccinated=[158.1 140.5 125.8], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[469.1 459.5 382.7], UnderstockPenalty=0.0, Reward=411.3
+Week 10: Orders=[600. 600. 540.], Demand=[171.4 131.4  86.4], Vaccinated=[171.4 131.4  86.4], Stockout=[0. 0. 0.], Expired=[  0.   27.  136.3], Inventory=[627.6 441.7 450. ], UnderstockPenalty=0.0, Reward=129.2
+Week 11: Orders=[530. 600. 430.], Demand=[ 80.6 217.5 103.8], Vaccinated=[ 80.6 217.5 103.8], Stockout=[0. 0. 0.], Expired=[27.1  0.   0. ], Inventory=[692.4 382.5 846.2], UnderstockPenalty=0.0, Reward=342.1
+Week 12: Orders=[220. 360. 170.], Demand=[64.7 10.  53.7], Vaccinated=[64.7 10.  53.7], Stockout=[0. 0. 0.], Expired=[125.3  73.7   2.5], Inventory=[610.  516.3 943.8], UnderstockPenalty=0.0, Reward=-194.4
+  Evaluating: Always order 300...
+Week 1: Orders=[300. 300. 300.], Demand=[82.8 91.1 64.4], Vaccinated=[82.8 91.1 64.4], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[217.2 208.9 235.6], UnderstockPenalty=0.0, Reward=231.8
+Week 2: Orders=[300. 300. 300.], Demand=[70.  59.3 55.2], Vaccinated=[70.  59.3 55.2], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[147.1 149.6 180.3], UnderstockPenalty=151.2, Reward=89.1
+Week 3: Orders=[300. 300. 300.], Demand=[137.4  66.6  50. ], Vaccinated=[137.4  66.6  50. ], Stockout=[0. 0. 0.], Expired=[  9.7  83.  130.3], Inventory=[300. 300. 300.], UnderstockPenalty=0.0, Reward=-89.3
+Week 4: Orders=[300. 300. 300.], Demand=[170.5 142.3 242.6], Vaccinated=[170.5 142.3 242.6], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[429.5 457.7 357.4], UnderstockPenalty=0.0, Reward=543.0
+Week 5: Orders=[300. 300. 300.], Demand=[257.  136.  118.5], Vaccinated=[257.  136.  118.5], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[472.5 464.  538.9], UnderstockPenalty=0.0, Reward=496.8
+Week 6: Orders=[300. 300. 300.], Demand=[254.8 159.7  98.3], Vaccinated=[254.8 159.7  98.3], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[517.7 440.3 740.6], UnderstockPenalty=0.0, Reward=495.9
+Week 7: Orders=[300. 300. 300.], Demand=[258.6 151.7 119.7], Vaccinated=[258.6 151.7 119.7], Stockout=[0. 0. 0.], Expired=[ 0.  10.2 20.8], Inventory=[541.4 438.1 859.4], UnderstockPenalty=0.0, Reward=465.1
+Week 8: Orders=[300. 300. 300.], Demand=[214.2 149.4 109.7], Vaccinated=[214.2 149.4 109.7], Stockout=[0. 0. 0.], Expired=[  0.    0.  190.3], Inventory=[585.8 450.6 700. ], UnderstockPenalty=0.0, Reward=170.5
+Week 9: Orders=[300. 300. 300.], Demand=[158.1 140.5 125.8], Vaccinated=[158.1 140.5 125.8], Stockout=[0. 0. 0.], Expired=[  0.    0.  174.2], Inventory=[641.9 459.5 700. ], UnderstockPenalty=0.0, Reward=145.1
+Week 10: Orders=[300. 300. 300.], Demand=[171.4 131.4  86.4], Vaccinated=[171.4 131.4  86.4], Stockout=[0. 0. 0.], Expired=[  0.   16.8 173. ], Inventory=[628.6 451.9 740.6], UnderstockPenalty=0.0, Reward=86.4
+Week 11: Orders=[300. 300. 300.], Demand=[ 80.6 217.5 103.8], Vaccinated=[ 80.6 217.5 103.8], Stockout=[0. 0. 0.], Expired=[175.7   0.   36.7], Inventory=[543.8 382.5 859.4], UnderstockPenalty=0.0, Reward=65.4
+Week 12: Orders=[300. 300. 300.], Demand=[64.7 10.  53.7], Vaccinated=[64.7 10.  53.7], Stockout=[0. 0. 0.], Expired=[149.5  83.9 246.3], Inventory=[585.8 506.1 700. ], UnderstockPenalty=0.0, Reward=-608.9
+  Evaluating: Always order 100...
+Week 1: Orders=[100. 100. 100.], Demand=[82.8 91.1 64.4], Vaccinated=[82.8 91.1 64.4], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[217.2 208.9 235.6], UnderstockPenalty=0.0, Reward=231.8
+Week 2: Orders=[100. 100. 100.], Demand=[70.  59.3 55.2], Vaccinated=[70.  59.3 55.2], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[147.1 149.6 180.3], UnderstockPenalty=151.2, Reward=89.1
+Week 3: Orders=[100. 100. 100.], Demand=[137.4  66.6  50. ], Vaccinated=[137.4  66.6  50. ], Stockout=[0. 0. 0.], Expired=[  9.7  83.  130.3], Inventory=[100. 100. 100.], UnderstockPenalty=522.0, Reward=-396.5
+Week 4: Orders=[100. 100. 100.], Demand=[170.5 142.3 242.6], Vaccinated=[170.5 142.3 200. ], Stockout=[ 0.   0.  42.6], Expired=[0. 0. 0.], Inventory=[29.5 57.7  0. ], UnderstockPenalty=962.8, Reward=-184.9
+Week 5: Orders=[100. 100. 100.], Demand=[257.  136.  118.5], Vaccinated=[129.5 136.  100. ], Stockout=[127.5   0.   18.5], Expired=[0. 0. 0.], Inventory=[ 0.  21.6  0. ], UnderstockPenalty=1063.1, Reward=-477.5
+Week 6: Orders=[100. 100. 100.], Demand=[254.8 159.7  98.3], Vaccinated=[100.  121.6  98.3], Stockout=[154.8  38.1   0. ], Expired=[0. 0. 0.], Inventory=[0.  0.  1.7], UnderstockPenalty=1097.4, Reward=-592.8
+Week 7: Orders=[100. 100. 100.], Demand=[258.6 151.7 119.7], Vaccinated=[100.  100.  101.7], Stockout=[158.6  51.7  18.1], Expired=[0. 0. 0.], Inventory=[0. 0. 0.], UnderstockPenalty=1102.0, Reward=-693.6
+Week 8: Orders=[100. 100. 100.], Demand=[214.2 149.4 109.7], Vaccinated=[100. 100. 100.], Stockout=[114.2  49.4   9.7], Expired=[0. 0. 0.], Inventory=[0. 0. 0.], UnderstockPenalty=1102.0, Reward=-614.3
+Week 9: Orders=[100. 100. 100.], Demand=[158.1 140.5 125.8], Vaccinated=[100. 100. 100.], Stockout=[58.1 40.5 25.8], Expired=[0. 0. 0.], Inventory=[0. 0. 0.], UnderstockPenalty=1102.0, Reward=-576.1
+Week 10: Orders=[100. 100. 100.], Demand=[171.4 131.4  86.4], Vaccinated=[100.  100.   86.4], Stockout=[71.4 31.4  0. ], Expired=[0. 0. 0.], Inventory=[ 0.   0.  13.6], UnderstockPenalty=1064.0, Reward=-494.3
+Week 11: Orders=[100. 100. 100.], Demand=[ 80.6 217.5 103.8], Vaccinated=[ 80.6 100.  103.8], Stockout=[  0.  117.5   0. ], Expired=[0. 0. 0.], Inventory=[19.4  0.   9.8], UnderstockPenalty=1051.4, Reward=-558.2
+Week 12: Orders=[100. 100. 100.], Demand=[64.7 10.  53.7], Vaccinated=[64.7 10.  53.7], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[54.7 90.  56. ], UnderstockPenalty=717.5, Reward=-304.1
+  Evaluating: Random...
+Week 1: Orders=[240. 210. 110.], Demand=[82.8 91.1 64.4], Vaccinated=[82.8 91.1 64.4], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[217.2 208.9 235.6], UnderstockPenalty=0.0, Reward=231.8
+Week 2: Orders=[ 40. 190. 180.], Demand=[70.  59.3 55.2], Vaccinated=[70.  59.3 55.2], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[147.1 149.6 180.3], UnderstockPenalty=151.2, Reward=89.1
+Week 3: Orders=[280.  80.  10.], Demand=[137.4  66.6  50. ], Vaccinated=[137.4  66.6  50. ], Stockout=[0. 0. 0.], Expired=[  9.7  83.  130.3], Inventory=[240. 210. 110.], UnderstockPenalty=308.0, Reward=-270.7
+Week 4: Orders=[140. 500. 370.], Demand=[170.5 142.3 242.6], Vaccinated=[170.5 142.3 242.6], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[109.5 257.7  47.4], UnderstockPenalty=567.8, Reward=210.6
+Week 5: Orders=[  0. 520. 360.], Demand=[257.  136.  118.5], Vaccinated=[257.  136.   57.4], Stockout=[ 0.   0.  61.1], Expired=[0. 0. 0.], Inventory=[132.5 201.6   0. ], UnderstockPenalty=673.0, Reward=-127.7
+Week 6: Orders=[150. 590. 160.], Demand=[254.8 159.7  98.3], Vaccinated=[254.8 159.7  98.3], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[ 17.7 440.3 271.7], UnderstockPenalty=194.8, Reward=388.7
+Week 7: Orders=[400. 260. 390.], Demand=[258.6 151.7 119.7], Vaccinated=[ 17.7 151.7 119.7], Stockout=[240.9   0.    0. ], Expired=[0. 0. 0.], Inventory=[  0.  448.3 511.9], UnderstockPenalty=216.0, Reward=-139.2
+Week 8: Orders=[220. 300. 150.], Demand=[214.2 149.4 109.7], Vaccinated=[150.  149.4 109.7], Stockout=[64.2  0.   0. ], Expired=[0. 0. 0.], Inventory=[  0.  450.6 562.3], UnderstockPenalty=216.0, Reward=192.3
+Week 9: Orders=[150. 500.  70.], Demand=[158.1 140.5 125.8], Vaccinated=[158.1 140.5 125.8], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[241.9 459.5 826.5], UnderstockPenalty=0.0, Reward=409.2
+Week 10: Orders=[380. 270. 240.], Demand=[171.4 131.4  86.4], Vaccinated=[171.4 131.4  86.4], Stockout=[0. 0. 0.], Expired=[  0.  27. 190.], Inventory=[290.5 441.7 700. ], UnderstockPenalty=0.0, Reward=49.4
+Week 11: Orders=[ 40.  90. 180.], Demand=[ 80.6 217.5 103.8], Vaccinated=[ 80.6 217.5 103.8], Stockout=[0. 0. 0.], Expired=[ 0.   0.  56.2], Inventory=[359.9 382.5 610. ], UnderstockPenalty=0.0, Reward=304.1
+Week 12: Orders=[540.  20.  30.], Demand=[64.7 10.  53.7], Vaccinated=[64.7 10.  53.7], Stockout=[0. 0. 0.], Expired=[  0.   73.7 336.3], Inventory=[675.2 516.3 460. ], UnderstockPenalty=0.0, Reward=-503.0
+  Evaluating: Reorder point (<200→300)...
+Week 1: Orders=[0. 0. 0.], Demand=[82.8 91.1 64.4], Vaccinated=[82.8 91.1 64.4], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[217.2 208.9 235.6], UnderstockPenalty=0.0, Reward=231.8
+Week 2: Orders=[0. 0. 0.], Demand=[70.  59.3 55.2], Vaccinated=[70.  59.3 55.2], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[147.1 149.6 180.3], UnderstockPenalty=151.2, Reward=89.1
+Week 3: Orders=[300. 300. 300.], Demand=[137.4  66.6  50. ], Vaccinated=[137.4  66.6  50. ], Stockout=[0. 0. 0.], Expired=[  9.7  83.  130.3], Inventory=[0. 0. 0.], UnderstockPenalty=1102.0, Reward=-741.5
+Week 4: Orders=[300. 300. 300.], Demand=[170.5 142.3 242.6], Vaccinated=[0. 0. 0.], Stockout=[170.5 142.3 242.6], Expired=[0. 0. 0.], Inventory=[0. 0. 0.], UnderstockPenalty=1102.0, Reward=-1801.2
+Week 5: Orders=[300. 300. 300.], Demand=[257.  136.  118.5], Vaccinated=[257.  136.  118.5], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[ 43.  164.  181.5], UnderstockPenalty=272.3, Reward=344.3
+Week 6: Orders=[300. 300. 300.], Demand=[254.8 159.7  98.3], Vaccinated=[254.8 159.7  98.3], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[ 88.2 304.3 383.1], UnderstockPenalty=110.2, Reward=439.0
+Week 7: Orders=[300.   0.   0.], Demand=[258.6 151.7 119.7], Vaccinated=[258.6 151.7 119.7], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[129.6 448.3 563.4], UnderstockPenalty=60.5, Reward=482.3
+Week 8: Orders=[300.   0.   0.], Demand=[214.2 149.4 109.7], Vaccinated=[214.2 149.4 109.7], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[215.4 450.6 753.7], UnderstockPenalty=0.0, Reward=459.1
+Week 9: Orders=[0. 0. 0.], Demand=[158.1 140.5 125.8], Vaccinated=[158.1 140.5 125.8], Stockout=[0. 0. 0.], Expired=[ 0.   0.  27.9], Inventory=[357.2 310.  600. ], UnderstockPenalty=0.0, Reward=369.9
+Week 10: Orders=[0. 0. 0.], Demand=[171.4 131.4  86.4], Vaccinated=[171.4 131.4  86.4], Stockout=[0. 0. 0.], Expired=[  0.   27.  213.6], Inventory=[485.8 151.7 300. ], UnderstockPenalty=0.0, Reward=19.1
+Week 11: Orders=[  0. 300.   0.], Demand=[ 80.6 217.5 103.8], Vaccinated=[ 80.6 151.7 103.8], Stockout=[ 0.  65.8  0. ], Expired=[  0.    0.  196.2], Inventory=[405.2   0.    0. ], UnderstockPenalty=886.0, Reward=-612.2
+Week 12: Orders=[  0. 300. 300.], Demand=[64.7 10.  53.7], Vaccinated=[64.7  0.   0. ], Stockout=[ 0.  10.  53.7], Expired=[40.5  0.   0. ], Inventory=[300.   0.   0.], UnderstockPenalty=886.0, Reward=-699.1
+  Evaluating: Seasonal schedule...
+Week 1: Orders=[100. 100. 100.], Demand=[82.8 91.1 64.4], Vaccinated=[82.8 91.1 64.4], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[217.2 208.9 235.6], UnderstockPenalty=0.0, Reward=231.8
+Week 2: Orders=[100. 100. 100.], Demand=[70.  59.3 55.2], Vaccinated=[70.  59.3 55.2], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[147.1 149.6 180.3], UnderstockPenalty=151.2, Reward=89.1
+Week 3: Orders=[300. 300. 300.], Demand=[137.4  66.6  50. ], Vaccinated=[137.4  66.6  50. ], Stockout=[0. 0. 0.], Expired=[  9.7  83.  130.3], Inventory=[100. 100. 100.], UnderstockPenalty=522.0, Reward=-396.5
+Week 4: Orders=[600. 600. 600.], Demand=[170.5 142.3 242.6], Vaccinated=[170.5 142.3 200. ], Stockout=[ 0.   0.  42.6], Expired=[0. 0. 0.], Inventory=[29.5 57.7  0. ], UnderstockPenalty=962.8, Reward=-184.9
+Week 5: Orders=[600. 600. 600.], Demand=[257.  136.  118.5], Vaccinated=[257.  136.  118.5], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[ 72.5 221.6 181.5], UnderstockPenalty=236.9, Reward=364.7
+Week 6: Orders=[300. 300. 300.], Demand=[254.8 159.7  98.3], Vaccinated=[254.8 159.7  98.3], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[417.7 440.3 683.1], UnderstockPenalty=0.0, Reward=497.5
+Week 7: Orders=[300. 300. 300.], Demand=[258.6 151.7 119.7], Vaccinated=[258.6 151.7 119.7], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[541.4 448.3 880.3], UnderstockPenalty=0.0, Reward=511.3
+Week 8: Orders=[100. 100. 100.], Demand=[214.2 149.4 109.7], Vaccinated=[214.2 149.4 109.7], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[585.8 450.6 890.3], UnderstockPenalty=0.0, Reward=454.1
+Week 9: Orders=[100. 100. 100.], Demand=[158.1 140.5 125.8], Vaccinated=[158.1 140.5 125.8], Stockout=[0. 0. 0.], Expired=[  0.    0.  327.9], Inventory=[641.9 459.5 546.3], UnderstockPenalty=0.0, Reward=-83.9
+Week 10: Orders=[0. 0. 0.], Demand=[171.4 131.4  86.4], Vaccinated=[171.4 131.4  86.4], Stockout=[0. 0. 0.], Expired=[  0.   27.  230.5], Inventory=[570.5 401.2 329.4], UnderstockPenalty=0.0, Reward=-9.9
+Week 11: Orders=[0. 0. 0.], Demand=[ 80.6 217.5 103.8], Vaccinated=[ 80.6 217.5 103.8], Stockout=[0. 0. 0.], Expired=[175.7   0.   15.9], Inventory=[414.2 283.7 309.7], UnderstockPenalty=0.0, Reward=104.4
+Week 12: Orders=[0. 0. 0.], Demand=[64.7 10.  53.7], Vaccinated=[64.7 10.  53.7], Stockout=[0. 0. 0.], Expired=[149.5  73.7  55.9], Inventory=[200. 200. 200.], UnderstockPenalty=56.0, Reward=-329.8
+  Evaluating: Vulnerability first (NACI)...
+Week 1: Orders=[  0. 100. 100.], Demand=[82.8 91.1 64.4], Vaccinated=[82.8 91.1 64.4], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[217.2 208.9 235.6], UnderstockPenalty=0.0, Reward=231.8
+Week 2: Orders=[100. 100. 300.], Demand=[70.  59.3 55.2], Vaccinated=[70.  59.3 55.2], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[147.1 149.6 180.3], UnderstockPenalty=151.2, Reward=89.1
+Week 3: Orders=[100. 300. 300.], Demand=[137.4  66.6  50. ], Vaccinated=[137.4  66.6  50. ], Stockout=[0. 0. 0.], Expired=[  9.7  83.  130.3], Inventory=[  0. 100. 100.], UnderstockPenalty=642.0, Reward=-467.5
+Week 4: Orders=[100. 300. 600.], Demand=[170.5 142.3 242.6], Vaccinated=[100.  142.3 242.6], Stockout=[70.5  0.   0. ], Expired=[0. 0. 0.], Inventory=[  0.   57.7 157.4], UnderstockPenalty=557.4, Reward=63.7
+Week 5: Orders=[100. 300. 300.], Demand=[257.  136.  118.5], Vaccinated=[100.  136.  118.5], Stockout=[157.   0.   0.], Expired=[0. 0. 0.], Inventory=[  0.  221.6 338.9], UnderstockPenalty=216.0, Reward=31.0
+Week 6: Orders=[100. 100. 100.], Demand=[254.8 159.7  98.3], Vaccinated=[100.  159.7  98.3], Stockout=[154.8   0.    0. ], Expired=[0. 0. 0.], Inventory=[  0.  361.9 840.6], UnderstockPenalty=216.0, Reward=30.6
+Week 7: Orders=[100. 100. 100.], Demand=[258.6 151.7 119.7], Vaccinated=[100.  151.7 119.7], Stockout=[158.6   0.    0. ], Expired=[0. 0. 0.], Inventory=[  0.  448.3 880.3], UnderstockPenalty=216.0, Reward=38.2
+Week 8: Orders=[100. 100. 100.], Demand=[214.2 149.4 109.7], Vaccinated=[100.  149.4 109.7], Stockout=[114.2   0.    0. ], Expired=[ 0.   0.  11.2], Inventory=[  0.  398.8 859.4], UnderstockPenalty=216.0, Reward=63.1
+Week 9: Orders=[100. 100. 100.], Demand=[158.1 140.5 125.8], Vaccinated=[100.  140.5 125.8], Stockout=[58.1  0.   0. ], Expired=[  0.    0.  474.2], Inventory=[  0.  358.3 359.4], UnderstockPenalty=216.0, Reward=-551.5
+Week 10: Orders=[100. 100. 100.], Demand=[171.4 131.4  86.4], Vaccinated=[100.  131.4  86.4], Stockout=[71.4  0.   0. ], Expired=[ 0. 27. 73.], Inventory=[  0. 300. 300.], UnderstockPenalty=216.0, Reward=-53.4
+Week 11: Orders=[100. 100. 100.], Demand=[ 80.6 217.5 103.8], Vaccinated=[ 80.6 217.5 103.8], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[ 19.4 182.5 296.2], UnderstockPenalty=192.7, Reward=281.3
+Week 12: Orders=[100. 100. 100.], Demand=[64.7 10.  53.7], Vaccinated=[64.7 10.  53.7], Stockout=[0. 0. 0.], Expired=[ 0.   0.  42.5], Inventory=[ 54.7 272.5 300. ], UnderstockPenalty=150.4, Reward=-31.7
+  Evaluating: Capacity fill...
+Week 1: Orders=[500. 300. 600.], Demand=[82.8 91.1 64.4], Vaccinated=[82.8 91.1 64.4], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[217.2 208.9 235.6], UnderstockPenalty=0.0, Reward=231.8
+Week 2: Orders=[580. 390. 600.], Demand=[70.  59.3 55.2], Vaccinated=[70.  59.3 55.2], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[147.1 149.6 180.3], UnderstockPenalty=151.2, Reward=89.1
+Week 3: Orders=[600. 450. 600.], Demand=[137.4  66.6  50. ], Vaccinated=[137.4  66.6  50. ], Stockout=[0. 0. 0.], Expired=[  9.7  83.  130.3], Inventory=[500. 300. 600.], UnderstockPenalty=0.0, Reward=-94.3
+Week 4: Orders=[300. 300. 400.], Demand=[170.5 142.3 242.6], Vaccinated=[170.5 142.3 242.6], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[629.5 457.7 757.4], UnderstockPenalty=0.0, Reward=537.0
+Week 5: Orders=[170. 140. 240.], Demand=[257.  136.  118.5], Vaccinated=[257.  136.  118.5], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[543.  464.  881.5], UnderstockPenalty=0.0, Reward=492.7
+Week 6: Orders=[260. 140. 120.], Demand=[254.8 159.7  98.3], Vaccinated=[254.8 159.7  98.3], Stockout=[0. 0. 0.], Expired=[  0.    0.  140.6], Inventory=[545.2 440.3 761.1], UnderstockPenalty=0.0, Reward=284.6
+Week 7: Orders=[250. 160. 240.], Demand=[258.6 151.7 119.7], Vaccinated=[258.6 151.7 119.7], Stockout=[0. 0. 0.], Expired=[  0.   10.2 280.3], Inventory=[456.6 418.4 600. ], UnderstockPenalty=0.0, Reward=79.6
+Week 8: Orders=[340. 180. 400.], Demand=[214.2 149.4 109.7], Vaccinated=[214.2 149.4 109.7], Stockout=[0. 0. 0.], Expired=[  0.    0.  132.9], Inventory=[502.3 409.  477.4], UnderstockPenalty=0.0, Reward=260.1
+Week 9: Orders=[300. 190. 520.], Demand=[158.1 140.5 125.8], Vaccinated=[158.1 140.5 125.8], Stockout=[0. 0. 0.], Expired=[0. 0. 0.], Inventory=[594.2 428.4 591.6], UnderstockPenalty=0.0, Reward=408.3
+Week 10: Orders=[210. 170. 410.], Demand=[171.4 131.4  86.4], Vaccinated=[171.4 131.4  86.4], Stockout=[0. 0. 0.], Expired=[  0.    0.  145.2], Inventory=[628.6 468.6 760. ], UnderstockPenalty=0.0, Reward=152.9
+Week 11: Orders=[170. 130. 240.], Demand=[ 80.6 217.5 103.8], Vaccinated=[ 80.6 217.5 103.8], Stockout=[0. 0. 0.], Expired=[92.2  0.  16.2], Inventory=[627.2 382.5 880. ], UnderstockPenalty=0.0, Reward=220.3
+Week 12: Orders=[170. 220. 120.], Demand=[64.7 10.  53.7], Vaccinated=[64.7 10.  53.7], Stockout=[0. 0. 0.], Expired=[185.3  69.6 186.3], Inventory=[550.  472.9 760. ], UnderstockPenalty=0.0, Reward=-551.1
+
+==========================================================================================================================
+  CONTINUOUS POLICY COMPARISON (100 episodes, mean ± std) — env=realistic
+==========================================================================================================================
+Policy                               Type                     Reward     Vaccinated     Stockout      Expired    Avg Order
+--------------------------------------------------------------------------------------------------------------------------
+RL Agent (PPO continuous)            Learned         1654.5 ± 552.3 4318.2 ±235.1   4.6 ± 17.9 1554.7 ±256.9 1301.8 ± 22.8 <-- BEST
+Capacity fill                        Rule-based      1474.9 ± 417.1 4319.2 ±236.7   3.6 ± 14.9 1679.6 ±165.9  949.4 ± 21.9
+Random                               Naive           1319.3 ± 595.7 4273.2 ±245.9  49.6 ±103.5 1554.9 ±270.4  892.2 ± 82.6
+Always order 300                     Naive           1184.8 ± 456.3 4319.2 ±236.7   3.6 ± 14.9 1890.1 ±169.1  900.0 ±  0.0
+Seasonal schedule                    Rule-based       738.3 ± 402.8 4261.8 ±219.4  61.0 ± 73.3 1565.3 ±148.6  625.0 ±  0.0
+Vulnerability first (NACI)           Rule-based     -1285.0 ± 480.4 3460.5 ±194.8 862.3 ±156.6 1115.6 ±161.8  442.7 ± 17.8
+Reorder point (<200→300)             Rule-based     -1762.5 ± 648.4 3701.8 ±233.2 621.0 ±157.6 943.6 ±227.8  412.5 ± 30.7
+Always order 100                     Naive          -2951.3 ± 646.8 3315.7 ±122.8 1007.0 ±180.7 200.2 ± 71.4  300.0 ±  0.0
+==========================================================================================================================
+
+========================================================================================
+  REWARD BREAKDOWN (avg per episode)
+  reward = +vaccinated − wtd_stockout − expired_cost − storage_cost − understock_cost
+========================================================================================
+Policy                                 Vaccinated   Wtd Stockout   Expired Cost    Storage   Understock
+----------------------------------------------------------------------------------------
+RL Agent (PPO continuous)                  4318.2            5.5         2332.0      175.4        150.7
+Capacity fill                              4319.2            4.3         2519.4      173.1        147.6
+Random                                     4273.2           61.8         2332.4      151.7        408.0
+Always order 300                           4319.2            4.3         2835.2      171.8        123.1
+Seasonal schedule                          4261.8           78.7         2347.9      120.9        976.0
+Vulnerability first (NACI)                 3460.5         1043.3         1673.4       82.4       1946.4
+Reorder point (<200→300)                   3701.8         1132.5         1415.4       75.9       2840.5
+Always order 100                           3315.7         1401.4          300.3       27.6       4537.8
+========================================================================================
+
+==============================================================================
+  STOCKOUT BY REGION (avg doses/episode)
+==============================================================================
+Policy                                       R0         R1         R2
+                                        (urban)     (town)    (rural)
+------------------------------------------------------------------------------
+RL Agent (PPO continuous)                   4.6        0.0        0.0
+Capacity fill                               3.6        0.0        0.0
+Random                                     46.9        2.1        0.6
+Always order 300                            3.6        0.0        0.0
+Seasonal schedule                          53.9        5.9        1.2
+Vulnerability first (NACI)                848.0       14.3        0.0
+Reorder point (<200→300)                  259.6      190.9      170.5
+Always order 100                          720.0      266.4       20.7
+==============================================================================
+
+RL Agent (PPO) vs hand-designed continuous rules:
+  vs Reorder point (<200→300)                   better by 3417.1 pts
+  vs Seasonal schedule                          better by 916.3 pts
+  vs Vulnerability first (NACI)                 better by 2939.5 pts
+  vs Capacity fill                              better by 179.7 pts
+
+Saved evaluation results to: continuous_realistic_results.json
+
+Best policy by avg reward: RL Agent (PPO continuous) (1654.5 ± 552.3)

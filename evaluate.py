@@ -12,6 +12,7 @@ Runs policy comparisons over 100 episodes and prints:
 """
 
 import argparse
+import json
 import os
 import pickle
 
@@ -392,6 +393,24 @@ def show_policy_behavior(policy_fn, env, label="Policy Behavior"):
         week += 1
 
 
+def save_results(path, env_name, n_episodes, results):
+    """Save evaluation results to a JSON file for reporting."""
+    payload = {
+        "env": env_name,
+        "episodes": n_episodes,
+        "results": [
+            {
+                **result,
+                "stockout_per_region": result["stockout_per_region"].tolist(),
+            }
+            for result in results
+        ],
+    }
+
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
+
+
 # ---------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------
@@ -416,6 +435,11 @@ def main():
         "--show-ppo-behavior",
         action="store_true",
         help="Print one PPO episode trajectory for sanity checking.",
+    )
+    parser.add_argument(
+        "--save-results",
+        type=str,
+        help="Optional JSON path to save evaluation results.",
     )
     args = parser.parse_args()
 
@@ -506,6 +530,10 @@ def main():
         results.append(run_episodes(eval_env, policy_fn, label, n_episodes))
 
     print_table(results, n_episodes, env_name)
+
+    if args.save_results:
+        save_results(args.save_results, env_name, n_episodes, results)
+        print(f"\nSaved evaluation results to: {args.save_results}")
 
     best = max(results, key=lambda x: x["reward_mean"])
     print(

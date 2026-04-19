@@ -1,19 +1,35 @@
-# Python
+# ----------------------------
+# Python cache and tooling
+# ----------------------------
 __pycache__/
 *.pyc
 
-# virtual environment
+# ----------------------------
+# Virtual environments
+# ----------------------------
 venv/
 .venv/
 rl_env/
 
-# Mac
+# ----------------------------
+# OS and editor files
+# ----------------------------
 .DS_Store
-
-# model files
-*.zip
-
 .vscode/
+
+# ----------------------------
+# Model artifacts and learned tables
+# Keep these out of the public repo;
+# the project should be reproducible
+# by training from scratch.
+# ----------------------------
+*.zip
 *.npy
 *.pkl
+
+# ----------------------------
+# Training logs
+# ----------------------------
 ppo_tensorboard/
+
+*.json
